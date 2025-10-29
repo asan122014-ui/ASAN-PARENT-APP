@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Your Email</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background:#F6F8FC;font-family:'Inter',Helvetica,Arial,sans-serif;}
+    .container { max-width:420px;margin:40px auto;background:#fff;border-radius:22px;box-shadow:0 8px 32px rgba(60,80,220,0.07);padding:32px 28px 24px 28px;}
+    .family-safe-btn {background:#EEF2FE;padding:7px 22px;border-radius:20px;font-weight:500;color:#4068EA;border:none;font-size:1em;cursor:pointer;float:left;}
+    .welcome {font-size:1.7em;font-weight:800;color:#1A254B;margin-top:38px;}
+    .subtitle {color:#7082AB;font-size:1em;margin-bottom:6px;}
+    .progress {height:7px;width:100%;background:#EEF2FE;border-radius:6px;overflow:hidden;margin-bottom:18px;}
+    .progress-bar {height:7px;width:60%;background:#4068EA;}
+    label {color:#7082AB;font-size:1em;font-weight:500;margin-top:15px;display:block;margin-bottom:7px;text-align:left;}
+    .input-group {display:flex;align-items:center;border:1.5px solid #EEF2FE;border-radius:14px;padding:8px 8px 8px 2px;background:#F9FAFB;margin-bottom:10px;}
+    .input-group input {border:none;background:none;font-size:1.1em;font-weight:500;outline:none;width:100%;}
+    .send-code-btn, .continue-btn, .back-btn {background:#1960F2;border:none;color:#fff;border-radius:13px;font-weight:600;font-size:1.1em;cursor:pointer;margin:14px 0 15px 0;width:100%;padding:12px 0;}
+    .continue-btn { background:#1672EF;margin-top:18px;}
+    .back-btn { background:#EEF2FE;color:#1960F2;margin-top:-1px;}
+    .agreement {margin-bottom:12px;}
+    .agreement input[type="checkbox"] {width:18px;height:18px;margin-right:7px;}
+    .otp-blocks {display:flex;gap:13px;justify-content:center;margin-bottom:14px;margin-top:5px;}
+    .otp-blocks input {width:44px;height:44px;text-align:center;font-size:1.5em;font-weight:600;border:1.7px solid #EEF2FE;border-radius:14px;background:#F9FAFB;autocomplete:off;inputmode:numeric;pattern:\d*;}
+    .resend-link {font-size:1em;color:#1672EF;font-weight:600;cursor:pointer;}
+    .remember-label {color: #4B5563; font-size: 1em;}
+    .remember-checkbox {width:18px;height:18px; vertical-align: middle;}
+    .hidden { display:none;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="family-safe-btn">Family Safe</button>
+    <div class="welcome">Verify your email</div>
+    <div class="subtitle">Step 2 of 3 &bull; Email Verification</div>
+    <div class="progress"><div class="progress-bar"></div></div>
+    <!-- Email input and send -->
+    <div id="emailStep">
+      <label for="emailStepInput">Enter your email address</label>
+      <div class="input-group"><input type="email" id="emailStepInput" autocomplete="off" placeholder="user@email.com"/></div>
+      <button class="send-code-btn" onclick="sendEmailCode()">Send Code</button>
+    </div>
+    <!-- Code input step -->
+    <div id="otpStep" class="hidden">
+      <label>Enter verification code sent to your email</label>
+      <div class="otp-blocks">
+        <input type="text" maxlength="1" id="otp1" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp2')" />
+        <input type="text" maxlength="1" id="otp2" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp3')" />
+        <input type="text" maxlength="1" id="otp3" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp4')" />
+        <input type="text" maxlength="1" id="otp4" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp5')" />
+        <input type="text" maxlength="1" id="otp5" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp6')" />
+        <input type="text" maxlength="1" id="otp6" autocomplete="off" inputmode="numeric" pattern="\d*" />
+      </div>
+      <div>
+        <input type="checkbox" class="remember-checkbox" id="rememberDevice" checked/>
+        <label for="rememberDevice" class="remember-label">Remember this device</label>
+      </div>
+      <button class="continue-btn" onclick="verifyCode()">Continue &rarr;</button>
+      <button class="back-btn" onclick="showEmailStep()">&#8592; Back</button>
+      <div style="margin-top:13px; font-size:0.98em; text-align:center;">
+         Didn't receive code? <span class="resend-link" onclick="sendEmailCode()">Resend Code</span>
+      </div>
+    </div>
+  </div>
+<script>
+  let generatedCode = "";
+
+  function randomCode() {
+    return ('000000' + Math.floor(Math.random() * 1000000)).slice(-6);
+  }
+
+  function sendEmailCode() {
+    // Simple frontend validation
+    const email = document.getElementById('emailStepInput').value.trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailPattern.test(email)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    generatedCode = randomCode();
+    alert("Your code is: " + generatedCode + " (for demo/testing only)");
+    document.getElementById('emailStep').classList.add('hidden');
+    document.getElementById('otpStep').classList.remove('hidden');
+    document.getElementById('otp1').focus();
+    // Clear previous input
+    for (var i = 1; i <= 6; i++) { document.getElementById('otp'+i).value = ""; }
+  }
+
+  function showEmailStep() {
+    document.getElementById('emailStep').classList.remove('hidden');
+    document.getElementById('otpStep').classList.add('hidden');
+  }
+
+  function moveToNext(current, nextId) {
+    if (current.value.length >= 1) {
+      var next = document.getElementById(nextId);
+      if (next) next.focus();
+    }
+  }
+
+  function verifyCode() {
+    let code = "";
+    for(let i=1; i<=6; i++) {
+      code += document.getElementById('otp'+i).value;
+    }
+    if(code.length !== 6) {
+      alert("Please enter all 6 digits of the verification code.");
+      return;
+    }
+    if(code === generatedCode) {
+      alert("Email verified! (Simulated next step.)");
+      // window.location.href = "nextpage.html"; // put your next step here
+    } else {
+      alert("Incorrect code. Please try again.");
+    }
+    window.location.href = "studentdetails.html";
+  }
+</script>
+</body>
+</html>

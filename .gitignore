@@ -1,0 +1,34 @@
+## Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# dotenv environment variables
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# build
+dist/
+build/
+
+# backend data (local JSON DB)
+backend/data/data.json
+
+# local node_modules under backend
+backend/node_modules/
+
+# logs
+*.log
+
+# Windows
+ehthumbs.db
+Icon?

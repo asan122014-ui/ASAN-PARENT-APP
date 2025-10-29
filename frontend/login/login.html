@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ASAN Login - School Rides</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background:#F6F8FC;font-family:'Inter',Helvetica,Arial,sans-serif;margin:0;padding:0; }
+    .container { max-width:420px;margin:40px auto;background:#fff;border-radius:22px;box-shadow:0 8px 32px rgba(60,80,220,0.07);padding:32px 28px 18px 28px;}
+    .header-flex { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .welcome { font-size:2em;font-weight:800;margin-bottom:0;color:#1A254B;}
+    .subtitle { color:#7082AB;font-size:1em;margin-bottom:24px;}
+    .family-safe-btn { background:#EEF2FE;padding:7px 22px;border-radius:20px;font-weight:500;color:#4068EA;border:none;font-size:1em;cursor:pointer;}
+    label { color:#7082AB;font-size:1em;font-weight:500;margin-top:22px;display:block;margin-bottom:6px;text-align:left;}
+    .input-group { display:flex;align-items:center;border:1.7px solid #EEF2FE;border-radius:14px;padding:8px 8px 8px 2px;background:#F9FAFB;margin-bottom:8px;}
+    .country-code { background:#EEF2FE;border-radius:10px;font-weight:600;font-size:1.1em;padding:6px 11px;margin-right:6px;color:#4068EA;border:none;outline:none;}
+    .input-group input { border:none;background:none;font-size:1.1em;font-weight:500;outline:none;width:145px;}
+    .verified { color:#3CE17B;border-radius:8px;margin-left:auto;font-size:1em;font-weight:600;padding:4px 15px;background:#EEF8F4;}
+    .send-otp-btn { width:100%;background:#1960F2;border:none;padding:14px 0;color:#fff;border-radius:13px;font-weight:600;font-size:1em;cursor:pointer;margin-bottom:13px;margin-top:11px;}
+    .otp-wrapper { display:flex;gap:13px;justify-content:center;margin-bottom:15px;margin-top:10px;}
+    .otp-wrapper input { width:48px;height:48px;text-align:center;font-size:1.5em;font-weight:600;border:1.7px solid #EEF2FE;border-radius:14px;background:#F9FAFB;}
+    .resend-link { font-size:0.99em;color:#4068EA;cursor:pointer;}
+    .verify-btn { background:#1672EF;color:#fff;font-weight:600;border:none;border-radius:23px;font-size:1.12em;cursor:pointer;padding:15px 0;width:100%;margin-top:14px;margin-bottom:18px;}
+    .divider { margin:17px 0 9px 0;text-align:center;color:#C4CFF5;font-size:1em;}
+    .social-btn { width:100%;background:#F4F7FC;border:none;border-radius:17px;color:#1A254B;font-size:1.04em;font-weight:600;padding:13px;margin-bottom:0.7em;margin-top:0.4em;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;justify-content:center;gap:10px;}
+    .social-btn:last-child { margin-bottom:18px;}
+    .create-account-link { text-align:center;font-size:1em;color:#7082AB;margin-top:18px;}
+    .create-account-link a { color:#1672EF;font-weight:600;text-decoration:none;margin-left:4px;cursor:pointer;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header-flex">
+    <div>
+      <div class="welcome">Welcome</div>
+      <div class="subtitle">Sign in to manage school rides</div>
+    </div>
+    <button class="family-safe-btn">Family Safe</button>
+  </div>
+  <label for="phone">Mobile number</label>
+  <div class="input-group">
+    <select class="country-code">
+      <option value="+91">+91</option>
+    </select>
+    <input type="text" id="phone" maxlength="14" placeholder="" value=""/>
+    <span class="verified">Verified format</span>
+  </div>
+  <div style="color:#7082AB;font-size:0.95em;margin-bottom:7px;">
+    We'll send a one-time passcode (OTP)
+  </div>
+  <button class="send-otp-btn" onclick="sendOtp()">Send OTP</button>
+  <label for="otp-inputs" style="margin-top:16px">Enter OTP</label>
+  <!-- OTP Inputs -->
+<div class="otp-wrapper">
+  <input type="text" maxlength="1" id="otp1" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp2')" />
+  <input type="text" maxlength="1" id="otp2" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp3')" />
+  <input type="text" maxlength="1" id="otp3" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp4')" />
+  <input type="text" maxlength="1" id="otp4" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp5')" />
+  <input type="text" maxlength="1" id="otp5" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp6')" />
+  <input type="text" maxlength="1" id="otp6" autocomplete="off" inputmode="numeric" pattern="\d*" />
+</div>
+
+  <div style="text-align:left;color:#7082AB;font-size:0.98em;margin-bottom:7px;">
+    Didn't receive code? <span class="resend-link" onclick="sendOtp()">Resend</span>
+  </div>
+  <button class="verify-btn" onclick="verifyOtp()">Verify &amp; Continue</button>
+  <div class="divider">or</div>
+  <button class="social-btn" onclick="loginMicrosoft()">
+    <img src="https://img.icons8.com/ios/24/000000/microsoft.png"/> Continue with Microsoft
+  </button>
+  <button class="social-btn" onclick="loginGoogle()">
+    <img src="https://img.icons8.com/ios-filled/24/000000/google-logo.png"/> Continue with Google
+  </button>
+  <button class="social-btn" onclick="loginApple()">
+    <img src="https://img.icons8.com/ios-filled/24/000000/mac-os.png"/> Continue with Apple
+  </button>
+  <div class="create-account-link">
+    New to the app?
+    <a href="createaccount.html">Create an account</a>
+  </div>
+</div>
+<script>
+  let generatedOtp = "";
+
+  function randomOtp() {
+    return ('000000' + Math.floor(Math.random() * 1000000)).slice(-6);
+  }
+
+  function sendOtp() {
+    const phoneEl = document.getElementById('phone');
+    const country = document.querySelector('.country-code').value || '+91';
+    const phoneVal = phoneEl.value.replace(/\D+/g, '');
+    const phone = country + phoneVal;
+    if (!phoneVal) { alert('Enter phone first'); return; }
+    // Call backend to send OTP (dev returns otp in response)
+    fetch('/api/auth/send-otp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    }).then(r => r.json()).then(json => {
+      if (!json || json.error) return alert(json.error || 'Failed to send OTP');
+      generatedOtp = json.otp || '';
+      // Keep phone for verification
+      document._loginPhone = phone;
+      alert('OTP sent (dev): ' + generatedOtp);
+    }).catch(err => { console.error(err); alert('Network error'); });
+  }
+  function moveToNext(current, nextId) {
+  if(current.value.length >= 1){
+    var next = document.getElementById(nextId);
+    if(next) next.focus();
+  }
+}
+
+  function verifyOtp() {
+    var otp = "";
+    for (var i = 1; i <= 6; i++) otp += document.getElementById('otp' + i).value;
+    if (otp.length !== 6) { alert('Please enter all 6 digits of the OTP.'); return; }
+    const phone = document._loginPhone;
+    if (!phone) { alert('Please request an OTP first'); return; }
+    // Verify with backend
+    fetch('/api/auth/verify-otp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp })
+    }).then(r => r.json()).then(json => {
+      if (!json || json.error) return alert(json.error || 'OTP verification failed');
+      // Store user and redirect
+      if (json.user) localStorage.setItem('user', JSON.stringify(json.user));
+      window.location.href = '../dashboard/Home.html';
+    }).catch(err => { console.error(err); alert('Network error'); });
+  }
+
+  function loginMicrosoft() { alert("Microsoft account sign-in popup (simulated frontend only)."); }
+  function loginGoogle() { alert("Google accounts popup (simulated frontend only)."); }
+  function loginApple() { alert("Apple account sign-in popup (simulated frontend only)."); }
+</script>
+</body>
+</html>

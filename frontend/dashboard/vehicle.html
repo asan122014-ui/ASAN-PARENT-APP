@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Choose Vehicle – ASAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 500px; margin: 0 auto; padding: 0 0 90px 0; }
+    .top-row { display:flex;align-items:center;justify-content:space-between;margin:0 0 17px 0;}
+    .back-btn {background:none; border:none; color:#4068ea; font-size:1.12em; font-weight:600; cursor:pointer;}
+    .page-title {font-size:2em; font-weight:700; color:#14216c;}
+    .title-sub {color:#7082ab;font-size:1.07em;margin-top:-12px;margin-bottom:13px;}
+    .ask-ai-btn { background: #eef2fe; color: #4068ea; border:none; border-radius:18px; padding:8px 22px; font-size:1.08em; font-weight: 600; cursor:pointer;}
+    .details-card {background:#fff; border-radius:20px; box-shadow: 0 4px 14px rgba(75,110,250,0.08); padding:18px 16px 14px 18px; margin-bottom:20px;}
+    .rider-row {display:flex;align-items:center;}
+    .rider-info {margin-left:0;}
+    .rider-name {font-size:1.15em;font-weight:700;color:#1a254b;}
+    .rider-detail {color:#7082ab;font-size:1em;}
+    .dots { margin-left:auto; color:#bec7df; margin-top:5px;}
+    .dots .on {color:#2b66e5;}
+    .pref-row {display:flex;gap:14px;margin:15px 0 6px 0;}
+    .pill-btn {background:#eef2fe; color:#1a254b; border:none;border-radius:18px;font-weight:600; font-size:1.07em; padding:11px 25px; cursor:pointer;}
+    .recommended-title { color:#7082ab; font-size:1.09em; font-weight:700; margin:10px 0 2px 10px;}
+    .rec-listing {background:#fff; border-radius:17px; box-shadow: 0 4px 14px rgba(75,110,250,0.06); padding:14px 15px 11px 15px; display:flex; align-items:center; margin-bottom:15px;}
+    .vehicle-img {width:70px;height:54px;object-fit:cover; border-radius:10px;}
+    .veh-main {margin-left:13px;flex:1;}
+    .veh-title {font-size:1.15em;font-weight:700;color:#192646;}
+    .veh-tags {display:flex;gap:8px;margin:8px 0;}
+    .veh-tag-yellow {background:#fff3bc; color:#846107; border-radius:12px; font-size:.97em; font-weight:600; padding:6px 13px;}
+    .veh-tag {background:#eef2fe;color:#29457b;border-radius:12px; font-size:.98em;font-weight:600; padding:6px 13px;}
+    .veh-price {font-size:1.1em; color:#192646; font-weight:700; margin-right:10px;}
+    .veh-select {background:#eef2fe;color:#1672ef;border-radius:17px;padding:8px 18px;font-size:1.09em;font-weight:700;border:none;cursor:pointer;}
+    .action-row {display:flex;gap:13px; justify-content:center;margin-top:18px;}
+    .save-btn {background: #f4f8fe; color:#1672ef; border: none; font-size:1.11em; font-weight:700; border-radius:19px; padding:18px 0; width:45%;box-shadow: 0 3px 7px rgba(100,110,190,0.03);}
+    .primary-btn {background:#1672ef;color:#fff;border:none;border-radius:19px;font-size:1.17em;font-weight:700;padding:18px 0;width:49%;box-shadow: 0 4px 12px rgba(22,114,239,.11);}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:65px;z-index:10;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.97em;gap:4px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.7em;}
+    @media(max-width:520px) {.container{padding:0 0 70px 0;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="location.href='schedule.html'">Back</button>
+      <div>
+        <span class="page-title">Choose Vehicle</span>
+        <div class="title-sub">Step 2 of 3 &bull; Vehicle</div>
+      </div>
+      <button class="ask-ai-btn" onclick="alert('AI Help')">Ask AI</button>
+    </div>
+    <div class="details-card">
+      <div class="rider-row">
+        <div class="rider-info">
+          <div class="rider-name" id="childName"></div>
+          <div class="rider-detail" id="childDetail"></div>
+        </div>
+        <div class="dots">
+          <span class="material-icons on" style="font-size:1em;">fiber_manual_record</span>
+          <span class="material-icons on" style="font-size:1em;">fiber_manual_record</span>
+          <span class="material-icons" style="font-size:1em;">fiber_manual_record</span>
+        </div>
+      </div>
+      <div class="pref-row">
+        <button class="pill-btn">On time</button>
+        <button class="pill-btn">Eco preferred</button>
+        <button class="pill-btn">Child seat</button>
+      </div>
+    </div>
+    <div class="recommended-title">Recommended for you</div>
+    <!-- AUTOS and VANS List-->
+    <div class="rec-listing">
+      <img src="auto.webp" class="vehicle-img" alt="Auto" />
+      <div class="veh-main">
+        <div class="veh-title">Auto • 3 seats</div>
+        <div class="veh-tags">
+          <span class="veh-tag-yellow">Recommended</span>
+          <span class="veh-tag">Verified driver</span>
+        </div>
+      </div>
+      <span class="veh-price" id="priceAuto">-</span>
+      <button class="veh-select" onclick="selectVehicle('Auto')">Select</button>
+    </div>
+    <div class="rec-listing">
+      <img src="van.webp" class="vehicle-img" alt="Van" />
+      <div class="veh-main">
+        <div class="veh-title">Van • 8 seats</div>
+        <div class="veh-tags">
+          <span class="veh-tag">Eco</span>
+          <span class="veh-tag">Child seat</span>
+        </div>
+      </div>
+      <span class="veh-price" id="priceVan8">-</span>
+      <button class="veh-select" onclick="selectVehicle('Van 8')">Select</button>
+    </div>
+    <div class="rec-listing">
+      <img src="van.webp" class="vehicle-img" alt="Van" />
+      <div class="veh-main">
+        <div class="veh-title">Van • 6 seats</div>
+        <div class="veh-tags">
+          <span class="veh-tag">Most affordable</span>
+          <span class="veh-tag">ETA 8–10 min</span>
+        </div>
+      </div>
+      <span class="veh-price" id="priceVan6">-</span>
+      <button class="veh-select" onclick="selectVehicle('Van 6')">Select</button>
+    </div>
+    <div class="action-row">
+      <button class="save-btn" onclick="alert('Preference saved!')">Save preference</button>
+      <button class="primary-btn" onclick="location.href='payment.html'">Continue</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn active" onclick="location.href='ride.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span> Track
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALwACMYzDkMhWFkrpt5c5cb9MSevkyXdQ"></script>
+  <script>
+    // Use selectedChild from storage
+    function loadChildDetails() {
+      const child = JSON.parse(localStorage.getItem('selectedChild') || '{}');
+      const pickup = localStorage.getItem('pickupLocation') || 'Pickup';
+      const drop = localStorage.getItem('dropLocation') || 'Drop';
+      document.getElementById('childName').textContent = child.name || 'Student';
+      let detailArr = [child.gender, child.school, child.class ? "Class " + child.class : ""].filter(Boolean);
+      let detailLine = detailArr.length ? detailArr.join(' • ') : (pickup + " → " + drop);
+      document.getElementById('childDetail').textContent = detailLine;
+    }
+
+    // Fare calculation algorithms
+    function getFares(distKm) {
+      return {
+        auto: Math.round(35 * distKm + 50),
+        van6: Math.round(27 * distKm + 90),
+        van8: Math.round(29 * distKm + 120)
+      };
+    }
+
+    // Get and calculate distance/prices using Google Distance Matrix API
+    function setVehiclePrices() {
+      const pickup = localStorage.getItem('pickupLocation');
+      const drop = localStorage.getItem('dropLocation');
+      if (!pickup || !drop) {
+        document.getElementById('priceAuto').textContent = '-';
+        document.getElementById('priceVan6').textContent = '-';
+        document.getElementById('priceVan8').textContent = '-';
+        return;
+      }
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix({
+        origins: [pickup],
+        destinations: [drop],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC
+      }, function(response, status) {
+        if (status === 'OK') {
+          try {
+            let dtxt = response.rows[0].elements[0].distance.text;
+            let distKm = parseFloat(dtxt.replace(/[^0-9.]/g,'')) || 5;
+            const fares = getFares(distKm);
+            document.getElementById('priceAuto').textContent = '₹ ' + fares.auto;
+            document.getElementById('priceVan6').textContent = '₹ ' + fares.van6;
+            document.getElementById('priceVan8').textContent = '₹ ' + fares.van8;
+            window.fares = fares;
+          } catch { setNaN(); }
+        } else {
+          setNaN();
+        }
+        function setNaN(){ 
+          document.getElementById('priceAuto').textContent = '-'; 
+          document.getElementById('priceVan6').textContent = '-'; 
+          document.getElementById('priceVan8').textContent = '-'; 
+        }
+      });
+    }
+
+    // Save selected vehicle, fare; redirect to payment
+    function selectVehicle(type) {
+      const fares = window.fares || {};
+      let fare = '-';
+      if(type === 'Auto') fare = fares.auto;
+      if(type === 'Van 6') fare = fares.van6;
+      if(type === 'Van 8') fare = fares.van8;
+      localStorage.setItem('selectedVehicle', type);
+      localStorage.setItem('amtTotal', fare || '');
+      alert(`Selected ${type} – ₹ ${fare}`);
+      window.location.href = "payment.html";
+    }
+
+    window.onload = function() {
+      loadChildDetails();
+      setVehiclePrices();
+    }
+  </script>
+</body>
+</html>

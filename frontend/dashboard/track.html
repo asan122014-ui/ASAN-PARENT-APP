@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Track Ride – ASAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 520px; margin: 0 auto; padding: 0 0 80px 0; }
+    .top-row {display:flex;align-items:center;justify-content:space-between;margin:0 0 7px 0;}
+    .back-btn {background:none; border:none; color:#4068ea; font-size:1.16em; font-weight:700; cursor:pointer;}
+    .page-title {font-size:2.04em; font-weight:800; color:#14216c;}
+    .page-route { color: #b3bbc7; font-size:1.14em;}
+    .eta-badge {background:#eef2fe;color:#1672ef;border-radius:19px;font-size:1.13em;font-weight:700;padding:12px 20px;}
+    .main-card {background:#fff;border-radius:22px;box-shadow:0 4px 15px rgba(75,110,250,0.07);padding:22px 17px 13px 17px;margin-bottom:13px;}
+    .map-box {border-radius:16px;overflow:hidden;margin:18px 0 10px 0; border:1px solid #eef2fe;}
+    #gmap {width:100%;height:190px;min-height:190px;}
+    .status-title {font-size:1.25em;font-weight:800;color:#192646;margin-bottom:8px;}
+    .status-block {background:#f6f8fc;padding:13px 13px 13px 17px;border-radius:14px;line-height:1.5;margin-bottom:12px;}
+    .status-block div span, .status-block b {font-weight:700;}
+    .main-row {display:flex;gap:13px;margin-top:13px;}
+    .vehicle-card, .fare-card {background:#f6f8fc; border-radius:15px;padding:16px 19px;flex:1;}
+    .veh-label,.fare-label { font-size:1em; color:#7d8ba6;}
+    .veh-value, .fare-value { font-weight:700; font-size:1.13em; color:#14216c; }
+    .fare-value { font-size:1.18em;}
+    .face-row {display:flex;align-items:center;margin:22px 0 14px 0;}
+    .face-avatar-text {width:44px;height:44px;border-radius:50%;background:#dbdbeb;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.45em;color:#4c5392;}
+    .face-block {margin-left:11px;}
+    .face-name {font-weight:700;color:#1a254b; font-size:1.12em;}
+    .face-meta {color:#8c99b4;font-size:.99em;}
+    .face-btn, .face-btn-text {background:#eef2fe; color:#1672ef; border:none; border-radius:11px; font-size:1em; font-weight:700; padding:9px 22px; margin-left:14px; cursor:pointer;}
+    .vehicle-img-preview {display:none;}
+    .livecam-card {background:#f6f8fc; border-radius:16px; padding:11px 15px 14px 15px; margin-bottom:12px; display:flex; align-items:center;}
+    .livecam-img-wrap {position:relative;width:70px;height:50px;flex-shrink:0;}
+    .livecam-img {width:100%;height:100%;border-radius:10px;object-fit:cover;display:block;}
+    .livecam-main {margin-left:13px;flex:1;}
+    .livecam-title {font-weight:700;}
+    .livecam-meta {font-size:1em;color:#8b92ab;margin-bottom:6px;}
+    .livecam-bar-wrap {margin:9px 0 0 0;}
+    .livecam-bar {width:100%;height:7px;border-radius:6px;background:#eef2fe;overflow:hidden;}
+    .livecam-bar-fill {width:78%;height:7px;background:#1672ef;}
+    .livecam-btn {margin-left:auto;background:#eef2fe;color:#1672ef;border-radius:14px;font-weight:700;border:none;font-size:1.01em;padding:11px 19px;cursor:pointer;}
+    .actions-row {display:flex; gap:13px; margin:24px 0 4px 0;}
+    .actions-big {display:flex;gap:12px;margin:10px 0 0 0;}
+    .act-btn, .act-btn-big {background:#eef2fe; color:#1672ef; border:none; border-radius:17px; font-size:1.12em; font-weight:700; box-shadow:0 2px 6px rgba(100,110,190,0.03);}
+    .act-btn { padding:13px 0; flex:1; }
+    .act-btn-big { background:#1672ef;color:#fff;padding:16px 0; flex:2;}
+    .divider {margin:12px 0 2px 0; border: none; border-top:1px solid #eaeaea;}
+    .modal-overlay {position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(17,23,45,0.14);z-index:900;display:none;justify-content:center;align-items:center;}
+    .modal-chat {background:#fff;max-width:370px;width:96vw;border-radius:14px;box-shadow:0 8px 48px rgba(45,90,200,0.14);padding:20px 14px 12px 21px;}
+    .chat-title {font-weight:700;font-size:1.19em;}
+    .chat-list {margin:14px 0 9px 0;}
+    .chat-msg {margin-bottom:8px;display:flex;}
+    .chat-bubble {background:#eef2fe;border-radius:12px;padding:8px 13px;max-width:72%;color:#29457b;}
+    .chat-bubble.user {background:#dbfcec;color:#295e57;align-self:flex-end;}
+    .modal-footer {margin-top:8px;display:flex;gap:7px;}
+    .chat-input {flex:1;padding:8px 13px;border-radius:13px;border:1px solid #e2e6f5;font-size:1em;}
+    .chat-send-btn {background:#1672ef;color:#fff;border:none;border-radius:11px;padding:7px 17px;font-weight:700;font-size:1em;cursor:pointer;}
+    .driver-modal {background:#fff;max-width:330px;width:95vw;border-radius:14px;box-shadow:0 7px 36px rgba(45,90,200,0.17);padding:22px 16px 17px 19px;}
+    .driver-modal-title {font-weight:700;font-size:1.14em;color:#122260;}
+    .driver-modal-row {margin:9px 0;font-size:1.06em;}
+    .driver-modal-close {position:absolute;top:13px;right:18px;color:#999;font-size:1.15em;font-weight:700;cursor:pointer;border:none;background:none;}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:64px;z-index:10;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.98em;gap:4px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.7em;}
+    @media(max-width:500px){.container{padding:0 0 55px 0;}}
+    .hide {display:none;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="window.location.href='payment.html'">Back</button>
+      <div>
+        <span class="page-title">Track ride</span>
+        <div class="page-route" id="pageRoute"></div>
+      </div>
+      <span class="eta-badge">ETA 18 min</span>
+    </div>
+    <div class="main-card">
+      <div class="map-box"><div id="gmap"></div></div>
+      <div class="status-title" id="statusTitle"></div>
+      <div class="status-block">
+        <div><b>Student Name:</b> <span id="statusStudent"></span></div>
+        <div><b>Pickup Time:</b> <span id="statusTime"></span></div>
+        <div><b>Stop:</b> <span id="statusStop"></span></div>
+        <div><b>Status:</b> <span id="statusVerified" class="face-btn-text" style="margin-left:2px;">Verified</span></div>
+      </div>
+      <div class="main-row">
+        <div class="vehicle-card">
+          <div class="veh-label">Vehicle</div>
+          <div class="veh-value" id="vehType"></div>
+          <div class="veh-label" style="margin-top:8px;letter-spacing:.02em;font-weight:600;">Plate <span id="vehNum"></span></div>
+        </div>
+        <div class="fare-card">
+          <div class="fare-label">Fare</div>
+          <div class="fare-value" id="fareValue"></div>
+          <div class="fare-label" style="margin-top:8px;">Charged post-ride</div>
+        </div>
+      </div>
+    </div>
+    <div class="face-row">
+      <div class="face-avatar-text" id="driverAvatar">AC</div>
+      <div class="face-block">
+        <div class="face-name" id="driverName"></div>
+        <div class="face-meta" id="driverMeta"></div>
+      </div>
+      <button class="face-btn" onclick="callDriver()">Call</button>
+      <button class="face-btn" onclick="showChat()">Message</button>
+    </div>
+    <div class="livecam-card">
+      <div class="livecam-img-wrap">
+        <img src="livecam.png" class="livecam-img" />
+      </div>
+      <div class="livecam-main">
+        <div class="livecam-title">Live camera</div>
+        <div class="livecam-meta">Stream active &bull; Front dash</div>
+        <div class="livecam-bar-wrap"><div class="livecam-bar"><div class="livecam-bar-fill"></div></div></div>
+      </div>
+      <button class="livecam-btn" onclick="alert('Entering fullscreen')">Fullscreen</button>
+    </div>
+    <div class="actions-row">
+      <button class="act-btn" onclick="showDriverDetails()">Contact driver</button>
+      <button class="act-btn-big" onclick="location.href='alerts.html'">Alerts</button>
+    </div>
+    <div class="actions-big">
+      Enable pickup alerts
+    </div>
+    <div class="divider"></div>
+    <!-- Chat Modal -->
+    <div class="modal-overlay" id="chatModal">
+      <div class="modal-chat">
+        <div style="display:flex;align-items:center;">
+          <button class="back-btn" onclick="hideChat()" style="margin-right:8px;background:#eef2fe;border-radius:11px;padding:8px 16px;color:#4068ea;font-weight:700;">Back</button>
+          <span class="chat-title">Message driver</span>
+        </div>
+        <div class="chat-list" id="chatList"></div>
+        <div class="modal-footer">
+          <input class="chat-input" id="chatInput" placeholder="Type a message..."/>
+          <button class="chat-send-btn" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+    <!-- Driver Details Modal -->
+    <div class="modal-overlay" id="driverModal">
+      <div class="driver-modal" style="position:relative;">
+        <button class="driver-modal-close" onclick="hideDriverDetails()">×</button>
+        <div class="driver-modal-title" id="driverDetailsTitle"></div>
+        <div class="driver-modal-row" id="driverDetailsBody"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn" onclick="location.href='ride.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn active" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span> Track
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALwACMYzDkMhWFkrpt5c5cb9MSevkyXdQ"></script>
+  <script>
+    function getPaymentFare() {
+      let amt = localStorage.getItem('amtTotal');
+      if (!amt) {
+        const fare = localStorage.getItem('fareValue');
+        return fare || '₹ -';
+      }
+      return amt;
+    }
+    function getSelectedChild() {
+      const child = JSON.parse(localStorage.getItem('selectedChild') || '{}');
+      return child.name || 'Student';
+    }
+    function getPickupTime() {
+      const preset = JSON.parse(localStorage.getItem('schedulePreset') || '{}');
+      return preset.pickup || '--:--';
+    }
+    function getPickupDropPath() {
+      let pickup = localStorage.getItem('pickupLocation') || '-';
+      let drop = localStorage.getItem('dropLocation') || '-';
+      return pickup + " → " + drop;
+    }
+    document.getElementById('pageRoute').textContent = getPickupDropPath();
+    document.getElementById('statusTitle').textContent = "Driver en route to pickup";
+    document.getElementById('statusStudent').textContent = getSelectedChild();
+    document.getElementById('statusTime').textContent = getPickupTime();
+    document.getElementById('statusStop').textContent = '#1';
+    document.getElementById('statusVerified').textContent = 'Verified';
+    document.getElementById('vehType').textContent = "Maruti Suzuki Ertiga";
+    document.getElementById('vehNum').textContent = "DL8CAF5037";
+    document.getElementById('fareValue').innerHTML = getPaymentFare();
+    document.getElementById('driverAvatar').textContent = "AC";
+    document.getElementById('driverName').textContent = "Amit Chopra";
+    document.getElementById('driverMeta').textContent = "4.8 ★ • 2,150 rides";
+
+    window.onload = function() {
+      const geocoder = new google.maps.Geocoder();
+      let pickup = localStorage.getItem('pickupLocation');
+      let drop = localStorage.getItem('dropLocation');
+      if (!pickup) pickup = 'Charminar, Hyderabad';
+      if (!drop) drop = 'HITEC City, Hyderabad';
+      if (pickup && drop) {
+        geocoder.geocode({address: pickup}, function(pRes, pStatus) {
+          if (pStatus == 'OK' && pRes[0]) {
+            geocoder.geocode({address: drop}, function(dRes, dStatus) {
+              if (dStatus == 'OK' && dRes[0]) {
+                const pLoc = pRes[0].geometry.location;
+                const dLoc = dRes[0].geometry.location;
+                const map = new google.maps.Map(document.getElementById('gmap'), {center: pLoc, zoom:13});
+                new google.maps.Marker({position: pLoc, map, title:"Pickup",label: 'P'});
+                new google.maps.Marker({position: dLoc, map, title:"Drop",label: 'D'});
+                new google.maps.Polyline({
+                  path:[pLoc, dLoc],
+                  geodesic:true,
+                  strokeColor:'#1672ef', strokeOpacity:0.9, strokeWeight:7, map
+                });
+              }
+            });
+          } else {
+            new google.maps.Map(document.getElementById('gmap'), {center: {lat:21.7679,lng:78.8718}, zoom:4});
+          }
+        });
+      } else {
+        new google.maps.Map(document.getElementById('gmap'), {center: {lat:21.7679,lng:78.8718}, zoom:4});
+      }
+    }
+    // Chat Message Logic
+    let messages = [
+      {from:'driver',text:'Hello, your ride is confirmed!',time:'09:01'},
+      {from:'user',text:'Thanks!',time:'09:01'}
+    ];
+    function showChat() {
+      renderChat();
+      document.getElementById('chatModal').style.display = 'flex';
+      document.getElementById('chatInput').focus();
+    }
+    function hideChat() {
+      document.getElementById('chatModal').style.display = 'none';
+    }
+    function renderChat() {
+      const chatList = document.getElementById('chatList');
+      chatList.innerHTML = '';
+      messages.forEach(m => {
+        chatList.innerHTML += `<div class="chat-msg"><div class="chat-bubble ${m.from=='user'?'user':''}">${m.text} <span style="font-size:.85em;color:#8b96b6;margin-left:8px;">${m.time||''}</span></div></div>`;
+      });
+    }
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const now = new Date();
+      messages.push({from:'user',text, time:now.getHours().toString().padStart(2,'0')+":"+now.getMinutes().toString().padStart(2,'0')});
+      input.value = '';
+      renderChat();
+      setTimeout(()=> {
+        messages.push({from:'driver',text:"Received: "+text, time:now.getHours().toString().padStart(2,'0')+":"+now.getMinutes().toString().padStart(2,'0')});
+        renderChat();
+      }, 900);
+    }
+    function callDriver() {
+      window.open('tel:+919812345678', '_self');
+    }
+    function showDriverDetails() {
+      document.getElementById('driverDetailsTitle').textContent = "Driver details";
+      document.getElementById('driverDetailsBody').innerHTML =
+        "<b>Name:</b> Amit Chopra<br><b>Phone:</b> <a href='tel:+919812345678'>+91-9812345678</a><br><b>Vehicle:</b> Maruti Suzuki Ertiga<br><b>Plate:</b> DL8CAF5037<br><b>Rating:</b> 4.8 ★ (2,150 rides)<br><b>Experience:</b> 7+ years";
+      document.getElementById('driverModal').style.display = 'flex';
+    }
+    function hideDriverDetails() {
+      document.getElementById('driverModal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

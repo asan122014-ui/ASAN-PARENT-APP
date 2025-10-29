@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ASAN – New Ride</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 520px; margin: 0 auto; padding: 0 0 90px 0; }
+    .top-bar {display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+    .back-btn { background: #eef2fe; color: #4068ea; border: none; border-radius: 18px; font-size: 1em; font-weight: 500; cursor:pointer; padding: 10px 18px;}
+    .stepper { font-size:1.2em; margin:16px 0 18px 5px; color:#7082ab; font-weight:600; }
+    .stepper .active { color:#1672ef;}
+    .stepper-btn {
+      background: none;
+      border: none;
+      color: #1672ef;
+      font-size: 1.1em;
+      font-weight: 600;
+      margin: 0 4px;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+    .stepper-btn:hover {
+      color: #2964da;
+      text-decoration: underline;
+    }
+    .section { background: #fff; border-radius: 20px; box-shadow: 0 4px 16px rgba(75,110,250,0.07); margin:20px 0; padding: 18px 18px;}
+    .section-header-row {display: flex; justify-content: space-between; align-items: center;}
+    .section-header { font-size: 1.33em; font-weight: 700; color: #132263;}
+    .add-btn { background: #eef2fe; color: #4068ea; border-radius: 13px; font-size: 1em; border:none; padding:10px 18px; font-weight:700;display:flex;align-items:center;gap:7px;cursor:pointer;}
+    .child-list {margin-top:17px;}
+    .child-row { display: flex; align-items: center; border-radius: 17px; padding:15px 16px; margin-bottom: 13px; border:2.3px solid #f7faff; background:#f7faff;transition:0.1s; position:relative;}
+    .child-row.selected { border-color:#1672ef; background: #eaf2ff;}
+    .child-radio {margin-right:13px; width:21px; height:21px;}
+    .child-labels {flex:1;}
+    .child-main { font-weight:800;font-size:1.21em; color:#1a254b;}
+    .child-meta { color:#6a7189;font-size:.98em;margin-top:6px;}
+    .child-default {background:#edf4ff;color:#1672ef;padding:4px 14px;border-radius:11px;font-weight:700;}
+    .delete-btn, .edit-btn { background:#eef2fe;color:#4068ea;border:none;padding:8px 13px;border-radius:9px;cursor:pointer;font-size:1em;font-weight:700;margin-left:8px;}
+    .delete-btn:hover { background:#ffdadc; color:#bb1e2d;}
+    .add-another-container { margin-top:6px; text-align:center;}
+    .add-another-btn {padding:13px 42px; font-size:1.09em;font-weight:700;border:none;border-radius:15px;background:#1672ef;color:#fff; margin-top:9px;cursor:pointer;}
+    .pickup-section { display:flex; flex-wrap:wrap; gap:13px 12px; margin-top: 11px;}
+    .pickup-card { background: #f7faff; border-radius: 14px; flex: 1 1 47%; min-width: 140px; padding:18px 11px 10px 16px; margin-bottom:9px;}
+    .pickup-title { color:#7082ab; font-size:.99em; font-weight:600;}
+    .pickup-input {width:92%;font-size:1.09em;margin-top:7px;background:#fff;border:none;border-radius:7px;padding:7px 8px;}
+    .ride-type-row {margin:13px 0 5px 0;display:flex;gap:18px;}
+    .ride-radio-box {
+      display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+      border:2.2px solid #f5f7ff;background:#f9fafd;padding:17px 37px 15px 28px;border-radius:18px;cursor:pointer;transition:.14s;
+      font-size:1.18em;margin-bottom:8px;min-width:168px;
+    }
+    .ride-radio-box.selected, .ride-radio-box:hover { border-color:#1672ef;background:#f5f9ff;}
+    .ride-radio-box input[type=radio] {margin-right:13px;accent-color:#3766e8;width:1.18em;height:1.18em;}
+    .ride-radio-inner {display:inline-block;text-align:left;}
+    .rr-strong {color:#2964da;font-weight:800;font-size:1.14em;}
+    .rr-desc {color:#7a8aae;font-size:.97em;font-weight:500;}
+    #roundtripbox .rr-strong {color:#242735;}
+    #roundtripbox.selected .rr-strong {color:#2964da;}
+    .ride-type-help {background:#eef2fe;color:#4068ea;font-weight:700;border-radius:15px;font-size:1em;padding:8px 19px;border:none;cursor:pointer;}
+    .modal-bg { position: fixed; left:0; top:0; width:100vw; height:100vh; z-index: 99; background: rgba(40,60,140,0.17); display:none; align-items:center; justify-content:center;}
+    .modal {background:#fff;padding:30px 24px 18px 24px;width:97vw;max-width:370px;border-radius:16px;box-shadow:0 6px 64px rgba(75,100,250,.14);position:relative;}
+    .modal h2 {margin-top: 0; color: #1a254b; font-size: 1.14em;}
+    .modal label {display:block;color:#6072a7;font-weight:600;margin-bottom:2px;}
+    .modal input, .modal select {width:100%;padding:11px 12px;margin-bottom:14px;border-radius:10px;border:1px solid #e1e6f0;font-size:1.09em;}
+    .modal-btn {width:100%;background:#1672ef;color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:1.07em;font-weight:700;margin-top:8px;cursor:pointer;}
+    .modal-close {position:absolute;top:13px;right:24px;color:#999;font-size:1.3em;font-weight:bold;cursor:pointer;}
+    .modal-error {color:#c52a42;font-size:1em;margin-bottom:9px;}
+    .continue-btn {position:fixed;left:0;right:0;bottom:0;z-index:200;background:#1672ef;color:#fff;border:none;height:65px;font-size:1.14em;font-weight:700;transition:.18s;cursor:pointer;}
+    .continue-btn:active {background:#1156be;}
+    .continue-btn:hover {background:#2159c8;}
+    @media(max-width:540px){.container{padding:10px 0 90px 0;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <button class="back-btn" onclick="location.href='Home.html'"><span class="material-icons" style="vertical-align:middle;font-size:1em;">arrow_back</span> Back</button>
+      <div class="stepper">
+        <span class="active">Child</span>
+        &bull;
+        <button class="stepper-btn" onclick="location.href='Location.html'">Locations</button>
+        &bull;
+        <button class="stepper-btn" onclick="location.href='Schedule.html'">Schedule</button>
+        &bull;
+        <button class="stepper-btn" onclick="location.href='Payment.html'">Payment</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header-row">
+        <span class="section-header">Select child</span>
+        <button class="add-btn" onclick="showChildModal()"><span class="material-icons" style="font-size:1.13em;">group_add</span> Add child</button>
+      </div>
+      <div class="child-list" id="childList"></div>
+      <div class="add-another-container" id="addAnotherBox">
+        <button class="add-another-btn" onclick="showChildModal()">+ Add Another Child</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">Pickup Contact</div>
+      <div class="pickup-section">
+        <div class="pickup-card"><div class="pickup-title">Guardian</div><input class="pickup-input" id="inputGuardian"></div>
+        <div class="pickup-card"><div class="pickup-title">Phone</div><input class="pickup-input" id="inputPhone"></div>
+        <div class="pickup-card"><div class="pickup-title">Pickup Code</div><input class="pickup-input" id="inputPickupCode"></div>
+        <div class="pickup-card"><div class="pickup-title">Alternate</div><input class="pickup-input" id="inputAlternate" placeholder="Add alternate/contact"></div>
+      </div>
+    </div>
+    <div class="section" style="margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="section-header">Ride Type</span>
+        <button class="ride-type-help" onclick="alert('Choose help')">Help me choose</button>
+      </div>
+      <div class="ride-type-row">
+        <label class="ride-radio-box" id="onewaybox">
+          <input type="radio" name="ridetype" id="oneway" checked onchange="setRideType('oneway')">
+          <span class="ride-radio-inner"><span class="rr-strong" id="onewaytext">One-way</span><br><span class="rr-desc">Pickup or drop only</span></span>
+        </label>
+        <label class="ride-radio-box" id="roundtripbox">
+          <input type="radio" name="ridetype" id="roundtrip" onchange="setRideType('roundtrip')">
+          <span class="ride-radio-inner"><span class="rr-strong" id="roundtriptext">Round trip</span><br><span class="rr-desc">Pickup and drop</span></span>
+        </label>
+      </div>
+    </div>
+  </div>
+  <button class="continue-btn" onclick="continueToLocation()">Continue</button>
+  <!-- Add/Edit Child Modal -->
+  <div class="modal-bg" id="addChildModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeChildModal()" aria-label="Close">&times;</button>
+      <h2 id="childModalTitle">Add Child Details</h2>
+      <form onsubmit="saveChild(event)">
+        <div class="modal-error" id="childErr"></div>
+        <label>Child Name</label>
+        <input type="text" id="childName" maxlength="32" required>
+        <label>Gender</label>
+        <select id="childGender" required>
+          <option value="">Select</option>
+          <option>Male</option>
+          <option>Female</option>
+          <option>Other</option>
+        </select>
+        <label>School Name</label>
+        <input type="text" id="childSchool" maxlength="32" required>
+        <label>Class</label>
+        <input type="text" id="childClass" maxlength="12" required>
+        <button class="modal-btn" type="submit">Save Child</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    let children = JSON.parse(localStorage.getItem('children') || '[]');
+    let selectedChild = 0;
+    let editingIndex = null;
+
+    function renderChildren() {
+      const list = document.getElementById('childList');
+      list.innerHTML = '';
+      if (children.length === 0) {
+        document.getElementById('addAnotherBox').style.display = "none";
+        return;
+      }
+      document.getElementById('addAnotherBox').style.display = "";
+      children.forEach((c,i)=>{
+        let meta = [c.gender, c.school, "Class " + c.class].filter(Boolean).join(" • ");
+        list.innerHTML += `
+          <div class="child-row${i===selectedChild?' selected':''}" onclick="selectChild(${i})">
+            <input type="radio" name="child" class="child-radio"${i===selectedChild?' checked':''}>
+            <div class="child-labels">
+              <div class="child-main">${c.name}</div>
+              <div class="child-meta">${meta}</div>
+            </div>
+            ${i===0?'<span class="child-default">Default</span>':''}
+            <button class="edit-btn" onclick="editChild(event,${i})">Edit</button>
+            <button class="delete-btn" onclick="deleteChild(event,${i})">Remove</button>
+          </div>`;
+      });
+    }
+    function selectChild(i){ selectedChild=i; renderChildren(); }
+    function showChildModal(){
+      document.getElementById('addChildModal').style.display='flex';
+      document.getElementById('childModalTitle').textContent = 'Add Child Details';
+      editingIndex = null;
+      clearModalFields();
+    }
+    function editChild(e, i){
+      e.stopPropagation();
+      const c = children[i];
+      document.getElementById('childModalTitle').textContent = 'Edit Child Details';
+      document.getElementById('addChildModal').style.display='flex';
+      document.getElementById('childName').value = c.name;
+      document.getElementById('childGender').value = c.gender;
+      document.getElementById('childSchool').value = c.school;
+      document.getElementById('childClass').value = c.class;
+      editingIndex = i;
+    }
+    function clearModalFields(){
+      document.getElementById('childName').value='';
+      document.getElementById('childGender').value='';
+      document.getElementById('childSchool').value='';
+      document.getElementById('childClass').value='';
+      document.getElementById('childErr').textContent='';
+    }
+    function closeChildModal(){
+      document.getElementById('addChildModal').style.display='none';
+      clearModalFields();
+    }
+    function saveChild(e){
+      e.preventDefault();
+      const name=document.getElementById('childName').value.trim();
+      const gender=document.getElementById('childGender').value;
+      const school=document.getElementById('childSchool').value.trim();
+      const classVal=document.getElementById('childClass').value.trim();
+      if(!name||!gender||!school||!classVal){
+        document.getElementById('childErr').textContent='Please fill all fields.';
+        return;
+      }
+      const newChild={name,gender,school,class:classVal};
+      if(editingIndex!==null){ children[editingIndex]=newChild; }
+      else { children.push(newChild); selectedChild=children.length-1; }
+      localStorage.setItem('children',JSON.stringify(children));
+      closeChildModal(); renderChildren();
+    }
+    function deleteChild(e,i){
+      e.stopPropagation();
+      children.splice(i,1);
+      if(selectedChild>=children.length) selectedChild=Math.max(children.length-1,0);
+      localStorage.setItem('children',JSON.stringify(children));
+      renderChildren();
+    }
+    function setRideType(type){
+      document.getElementById('onewaybox').classList.toggle('selected',type==='oneway');
+      document.getElementById('roundtripbox').classList.toggle('selected',type==='roundtrip');
+      document.getElementById('oneway').checked=(type==='oneway');
+      document.getElementById('roundtrip').checked=(type==='roundtrip');
+    }
+    setRideType('oneway');
+    function fillPickupContactFields(){
+      const c=JSON.parse(localStorage.getItem('parentContact')||'{}');
+      document.getElementById('inputGuardian').value=c.guardian||'';
+      document.getElementById('inputPhone').value=c.phone||'';
+      document.getElementById('inputPickupCode').value=c.pickupCode||'';
+      document.getElementById('inputAlternate').value=c.alternate||'';
+    }
+    function autoSavePickup(){
+      const c={
+        guardian:document.getElementById('inputGuardian').value,
+        phone:document.getElementById('inputPhone').value,
+        pickupCode:document.getElementById('inputPickupCode').value,
+        alternate:document.getElementById('inputAlternate').value
+      };
+      localStorage.setItem('parentContact',JSON.stringify(c));
+    }
+    ['inputGuardian','inputPhone','inputPickupCode','inputAlternate'].forEach(id=>{
+      document.addEventListener('input',e=>{
+        if(e.target.id===id) autoSavePickup();
+      });
+    });
+
+    function continueToLocation(){
+      if(children.length === 0){
+        alert("Please add/select a child.");
+        return;
+      }
+      // Save selected child's details persistently so it can be shown on next pages
+      localStorage.setItem('selectedChild', JSON.stringify(children[selectedChild]));
+      // Optionally save selectedChild index too if needed (e.g., localStorage.setItem('selectedChildIndex', selectedChild);)
+      location.href='Location.html';
+    }
+// On load, read selection from storage, if available
+window.onload = () => {
+  let storedIndex = parseInt(localStorage.getItem('selectedChildIndex'), 10);
+  if (!isNaN(storedIndex) && children.length > storedIndex) selectedChild = storedIndex;
+  renderChildren();
+  fillPickupContactFields();
+};
+
+function renderChildren() {
+  const list = document.getElementById('childList');
+  list.innerHTML = '';
+  if (children.length === 0) {
+    document.getElementById('addAnotherBox').style.display = "none";
+    return;
+  }
+  document.getElementById('addAnotherBox').style.display = "";
+  children.forEach((c,i)=>{
+    let meta = [c.gender, c.school, "Class " + c.class].filter(Boolean).join(" • ");
+    list.innerHTML += `
+      <div class="child-row${i===selectedChild?' selected':''}" onclick="selectChild(${i})">
+        <input type="radio" name="child" class="child-radio"${i===selectedChild?' checked':''}>
+        <div class="child-labels">
+          <div class="child-main">${c.name}</div>
+          <div class="child-meta">${meta}</div>
+        </div>
+        ${i===0?'<span class="child-default">Default</span>':''}
+        <button class="edit-btn" onclick="editChild(event,${i})">Edit</button>
+        <button class="delete-btn" onclick="deleteChild(event,${i})">Remove</button>
+      </div>`;
+  });
+}
+function selectChild(i){
+  selectedChild = i;
+  localStorage.setItem('selectedChildIndex', i);
+  renderChildren();
+}
+function showChildModal(){
+  document.getElementById('addChildModal').style.display='flex';
+  document.getElementById('childModalTitle').textContent = 'Add Child Details';
+  editingIndex = null;
+  clearModalFields();
+}
+function editChild(e, i){
+  e.stopPropagation();
+  const c = children[i];
+  document.getElementById('childModalTitle').textContent = 'Edit Child Details';
+  document.getElementById('addChildModal').style.display='flex';
+  document.getElementById('childName').value = c.name;
+  document.getElementById('childGender').value = c.gender;
+  document.getElementById('childSchool').value = c.school;
+  document.getElementById('childClass').value = c.class;
+  editingIndex = i;
+}
+function clearModalFields(){
+  document.getElementById('childName').value='';
+  document.getElementById('childGender').value='';
+  document.getElementById('childSchool').value='';
+  document.getElementById('childClass').value='';
+  document.getElementById('childErr').textContent='';
+}
+function closeChildModal(){
+  document.getElementById('addChildModal').style.display='none';
+  clearModalFields();
+}
+function saveChild(e){
+  e.preventDefault();
+  const name=document.getElementById('childName').value.trim();
+  const gender=document.getElementById('childGender').value;
+  const school=document.getElementById('childSchool').value.trim();
+  const classVal=document.getElementById('childClass').value.trim();
+  if(!name||!gender||!school||!classVal){
+    document.getElementById('childErr').textContent='Please fill all fields.';
+    return;
+  }
+  const newChild={name,gender,school,class:classVal};
+  if(editingIndex!==null){ children[editingIndex]=newChild; }
+  else { children.push(newChild); selectedChild=children.length-1; }
+  localStorage.setItem('children',JSON.stringify(children));
+  localStorage.setItem('selectedChildIndex', selectedChild);
+  closeChildModal(); renderChildren();
+}
+function deleteChild(e,i){
+  e.stopPropagation();
+  children.splice(i,1);
+  if(selectedChild>=children.length) selectedChild=Math.max(children.length-1,0);
+  localStorage.setItem('children',JSON.stringify(children));
+  localStorage.setItem('selectedChildIndex', selectedChild);
+  renderChildren();
+}
+function setRideType(type){
+  document.getElementById('onewaybox').classList.toggle('selected',type==='oneway');
+  document.getElementById('roundtripbox').classList.toggle('selected',type==='roundtrip');
+  document.getElementById('oneway').checked=(type==='oneway');
+  document.getElementById('roundtrip').checked=(type==='roundtrip');
+}
+setRideType('oneway');
+function fillPickupContactFields(){
+  const c=JSON.parse(localStorage.getItem('parentContact')||'{}');
+  document.getElementById('inputGuardian').value=c.guardian||'';
+  document.getElementById('inputPhone').value=c.phone||'';
+  document.getElementById('inputPickupCode').value=c.pickupCode||'';
+  document.getElementById('inputAlternate').value=c.alternate||'';
+}
+function autoSavePickup(){
+  const c={
+    guardian:document.getElementById('inputGuardian').value,
+    phone:document.getElementById('inputPhone').value,
+    pickupCode:document.getElementById('inputPickupCode').value,
+    alternate:document.getElementById('inputAlternate').value
+  };
+  localStorage.setItem('parentContact',JSON.stringify(c));
+}
+['inputGuardian','inputPhone','inputPickupCode','inputAlternate'].forEach(id=>{
+  document.addEventListener('input',e=>{
+    if(e.target.id===id) autoSavePickup();
+  });
+});
+function continueToLocation(){
+  if(children.length === 0){
+    alert("Please add/select a child.");
+    return;
+  }
+  // use up-to-date selectedChild from localStorage/index
+  let idx = parseInt(localStorage.getItem('selectedChildIndex'), 10);
+  if(isNaN(idx)) idx = selectedChild || 0;
+  localStorage.setItem('selectedChildIndex', idx);
+  localStorage.setItem('selectedChild', JSON.stringify(children[idx]));
+  location.href='Location.html';
+}
+
+  </script>
+</body>
+</html>

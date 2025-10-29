@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payment Portal – ASAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body {background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin:0;}
+    .container {max-width:400px;margin:0 auto;padding:0 0 65px 0;}
+    .top-row {display:flex;align-items:center;justify-content:space-between;margin:11px 0 2px 0;}
+    .back-btn {background:none;border:none;color:#4068ea;font-size:1.13em;font-weight:600;cursor:pointer;}
+    .page-title {font-size:2em;font-weight:800;color:#14216c;}
+    .page-sub {color:#7589ac;font-size:1.12em;}
+    .summary-card {background:#fff;border-radius:19px;box-shadow:0 4px 14px rgba(75,110,250,0.07);padding:19px 17px 12px 17px;margin:15px 0;}
+    .summary-row {display:flex;justify-content:space-between; margin-bottom:9px;}
+    .sum-label {color:#7b869c;font-size:1.02em;}
+    .sum-value, .amt-total {font-weight:700;color:#152252;font-size:1.14em;}
+    .amt-total {font-size:1.22em;}
+    .pay-methods-title {color:#7589ac;font-size:1.15em;font-weight:700;margin:10px 0 6px 2px;}
+    .tabs {display:flex;gap:10px;margin-bottom:12px;}
+    .tab-btn {flex:1;background:#eef2fe;color:#1a254b;font-size:1.08em;font-weight:700;padding:13px 0;border:none;border-radius:13px;cursor:pointer;transition:.15s;}
+    .tab-btn.selected {background:#1672ef;color:#fff;}
+    .method-card {background:#f9fcfd;border-radius:13px;padding:20px 14px 15px 14px;box-shadow:0 0px 6px rgba(80,120,215,0.03);}
+    .input-label {font-size:1em;color:#6a7fae;font-weight:600;margin-bottom:5px;margin-top:11px;}
+    .pay-input, .pay-input-short {background:#fff;font-size:1.13em;font-weight:600;padding:13.5px 18px;margin-bottom:6px;border-radius:12px;border:none;outline:none;}
+    .pay-input-short {width:42%;display:inline-block;margin-right:6%;}
+    .card-icons {float:right;margin-top:-39px;margin-right:12px;}
+    .icon-inline {font-size:1.25em;margin-left:7px;vertical-align:middle;}
+    .upi-list {display:flex;gap:10px;margin:10px 0 14px 0;}
+    .upi-btn {background:#fff;border:1.3px solid #eef2fe;color:#4068ea;font-size:1em;font-weight:600;padding:12px 21px 11px 21px;border-radius:13px;min-width:95px;cursor:pointer;}
+    .pay-btn-row {margin:20px 0 5px 0;}
+    .pay-btn {width:100%;background:#1672ef;color:#fff;border:none;border-radius:15px;padding:16px 0;font-size:1.22em;font-weight:700;cursor:pointer;box-shadow:0 3px 13px rgba(80,120,215,0.07);}
+    .note-row {color:#9cb0ca;margin:7px 0 2px 5px;font-size:1.01em;}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:54px;z-index:10;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.98em;gap:3px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.4em;}
+    @media(max-width:420px){.container{padding:0 0 50px 0;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="location.href='vehicle.html'">Back</button>
+      <div>
+        <span class="page-title">Payment</span>
+        <div class="page-sub">Complete your ride payment securely</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-row">
+        <div class="sum-label">Ride</div>
+        <div class="sum-value" id="ridePath">Loading...</div>
+      </div>
+      <div class="summary-row">
+        <div class="sum-label">Pickup</div>
+        <div class="sum-value" id="pickupSummary">-</div>
+      </div>
+      <div class="summary-row">
+        <div class="sum-label">Drop</div>
+        <div class="sum-value" id="dropSummary">-</div>
+      </div>
+      <div class="summary-row">
+        <div class="sum-label">Date</div>
+        <div class="sum-value" id="rideDate"></div>
+      </div>
+      <div class="summary-row">
+        <div class="sum-label">Distance</div>
+        <div class="sum-value" id="rideDistance">-</div>
+      </div>
+      <div class="summary-row">
+        <div class="sum-label">Total</div>
+        <div class="amt-total" id="amtTotal">&#8377; -</div>
+      </div>
+    </div>
+    <div class="pay-methods-title">Payment method</div>
+    <div class="tabs">
+      <button class="tab-btn selected" id="tabCard" onclick="showMethod('card')">Card</button>
+      <button class="tab-btn" id="tabUPI" onclick="showMethod('upi')">UPI</button>
+      <button class="tab-btn" id="tabNet" onclick="showMethod('netbank')">NetBanking</button>
+      <button class="tab-btn" id="tabWallet" onclick="showMethod('wallet')">Wallet</button>
+    </div>
+    <div id="cardForm" class="method-card">
+      <div class="input-label">Card number</div>
+      <input class="pay-input" maxlength="19" placeholder="xxxx xxxx xxxx xxxx">
+      <span class="card-icons">
+        <span class="material-icons icon-inline">credit_card</span>
+        <span class="material-icons icon-inline">visa</span>
+        <span class="material-icons icon-inline">payment</span>
+      </span>
+      <div class="input-label">Name on card</div>
+      <input class="pay-input" maxlength="30" placeholder="Cardholder name">
+      <div class="input-label">Expiry &nbsp;<span style="margin-left:36px;"> CVV</span></div>
+      <input class="pay-input-short" maxlength="5" placeholder="MM/YY">
+      <input class="pay-input-short" maxlength="4" placeholder="CVV">
+    </div>
+    <div id="upiForm" class="method-card" style="display:none;">
+      <div class="input-label">UPI ID</div>
+      <input class="pay-input" maxlength="40" placeholder="example@upi">
+      <div class="input-label" style="margin-top:12px;">Popular:</div>
+      <div class="upi-list">
+        <button class="upi-btn">Paytm</button>
+        <button class="upi-btn">PhonePe</button>
+        <button class="upi-btn">GPay</button>
+      </div>
+    </div>
+    <div id="netbankForm" class="method-card" style="display:none;">
+      <div class="input-label">Select bank</div>
+      <select class="pay-input">
+        <option>SBI</option>
+        <option>ICICI</option>
+        <option>HDFC</option>
+        <option>Axis Bank</option>
+        <option>Kotak Bank</option>
+      </select>
+    </div>
+    <div id="walletForm" class="method-card" style="display:none;">
+      <div class="input-label">Choose wallet</div>
+      <select class="pay-input">
+        <option>Paytm</option>
+        <option>Mobikwik</option>
+        <option>Amazon Pay</option>
+        <option>Freecharge</option>
+      </select>
+    </div>
+    <div class="pay-btn-row"><button class="pay-btn" onclick="payNow()">Pay <span id="amtBtn">&#8377; -</span></button></div>
+    <div class="note-row">Payment details are securely encrypted. For refund/help, contact support.</div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn" onclick="location.href='ridesetup.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn active" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">payment</span> Pay
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALwACMYzDkMhWFkrpt5c5cb9MSevkyXdQ"></script>
+  <script>
+    function showMethod(method) {
+      document.getElementById('cardForm').style.display = method === 'card' ? '' : 'none';
+      document.getElementById('upiForm').style.display = method === 'upi' ? '' : 'none';
+      document.getElementById('netbankForm').style.display = method === 'netbank' ? '' : 'none';
+      document.getElementById('walletForm').style.display = method === 'wallet' ? '' : 'none';
+      document.getElementById('tabCard').classList.toggle('selected', method === 'card');
+      document.getElementById('tabUPI').classList.toggle('selected', method === 'upi');
+      document.getElementById('tabNet').classList.toggle('selected', method === 'netbank');
+      document.getElementById('tabWallet').classList.toggle('selected', method === 'wallet');
+    }
+
+    function showLocationsInSummary() {
+      const pickup = localStorage.getItem('pickupLocation') || '';
+      const drop = localStorage.getItem('dropLocation') || '';
+      document.getElementById('pickupSummary').textContent = pickup || '-';
+      document.getElementById('dropSummary').textContent = drop || '-';
+      document.getElementById('ridePath').textContent = pickup && drop ? pickup + " → " + drop : 'Not set';
+    }
+
+    function updateRideSummary() {
+      showLocationsInSummary();
+      document.getElementById('rideDate').textContent = new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+
+      const pickup = localStorage.getItem('pickupLocation') || '';
+      const drop = localStorage.getItem('dropLocation') || '';
+
+      if(pickup && drop) {
+        getDistance(pickup, drop, function(distKm) {
+          document.getElementById('rideDistance').textContent = distKm ? distKm+' km' : '-';
+          const amount = distKm ? calcAmount(distKm) : 0;
+          document.getElementById('amtTotal').innerHTML = '&#8377; ' + amount;
+          document.getElementById('amtBtn').innerHTML = '&#8377; ' + amount;
+        });
+      } else {
+        document.getElementById('rideDistance').textContent = '-';
+        document.getElementById('amtTotal').innerHTML = '&#8377; -';
+        document.getElementById('amtBtn').innerHTML = '&#8377; -';
+      }
+    }
+
+    function calcAmount(distKm) {
+      // Fare: ₹110 base + ₹25/km (you can adjust)
+      return Math.round(110 + distKm * 25);
+    }
+
+    function getDistance(pickup, drop, cb) {
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix({
+        origins: [pickup],
+        destinations: [drop],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC
+      }, function(response, status) {
+        if (status === 'OK') {
+          try {
+            let dtxt = response.rows[0].elements[0].distance.text;
+            let distKm = parseFloat(dtxt.replace(/[^0-9\.]/g,''));
+            cb(distKm);
+          } catch { cb(0); }
+        } else {
+          cb(0);
+        }
+      });
+    }
+
+    function payNow() {
+      window.location.href = 'track.html';
+    }
+
+    window.onload = updateRideSummary;
+  </script>
+</body>
+</html>

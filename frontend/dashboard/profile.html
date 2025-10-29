@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Profile Hub</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; }
+    .container { max-width: 480px; margin: 0 auto; padding: 10px 0 80px 0; }
+    .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 7px;}
+    .back-btn, .safe-btn {background: #eef2fe; color: #4068ea; border: none; border-radius: 20px; padding: 7px 18px; font-size: 1em; font-weight: 500; cursor: pointer;}
+    .profile-title { font-size: 2em; font-weight: 800; margin: 12px 0 0 0; color: #132263;}
+    .profile-sub { color: #7082ab; font-size: 1.13em; margin-bottom: 22px;}
+    .profile-card { background: #fff; border-radius: 17px; box-shadow: 0 4px 14px rgba(75,110,250,0.07); padding: 14px 20px 12px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;}
+    .p-main { display: flex; align-items: center;}
+    .profile-pic { width: 58px; height: 58px; border-radius:50%; background: #dbe7ff; object-fit: cover; margin-right: 15px; cursor:pointer; }
+    .p-info { display: flex; flex-direction: column; justify-content: center;}
+    .p-name { font-weight: 700; color: #1a254b; font-size:1.17em;}
+    .p-role, .p-email { color:#7082ab; font-size:1em; font-weight:500;}
+    .edit-btn { background: #eef2fe; color: #4068ea; border: none; border-radius: 16px; font-size: 1em; padding: 7px 18px; cursor:pointer; font-weight:500;}
+    .pair-row { display: flex; gap:15px; margin-top:19px;}
+    .card { background: #fff; border-radius: 17px; box-shadow: 0 4px 14px rgba(75,110,250,0.07); padding:13px 20px 15px 20px; flex:1;}
+    .card-title { font-weight:600; color:#7082ab; margin-bottom:6px; font-size:1.08em;}
+    .card-main { font-size:1.18em; font-weight:700; color:#132263; letter-spacing:1px;}
+    .card-link { color:#4068ea; font-weight:500; font-size:1em; margin-top:5px; display:block; text-decoration:none; cursor:pointer;}
+    .section-label {font-size:1.09em; color:#7082ab; font-weight:600; margin:22px 0 2px 0;}
+    .child-card { background: #fff; border-radius: 17px; box-shadow: 0 4px 14px rgba(75,110,250,0.07); padding: 10px 20px 15px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom:7px;}
+    .child-vertical {display:flex; flex-direction:column;}
+    .child-name { font-weight:700; color:#1a254b; font-size:1.11em;}
+    .child-class { color:#7082ab; font-size:1em;}
+    .small-btn {margin:4px 7px 0 0; background: #eef2fe; color:#4068ea; border:none; border-radius:13px; font-size:1em; padding:7px 14px; cursor:pointer; font-weight:600;}
+    .info-link { color:#4068ea; background:none; border:none; font-size:1em; cursor:pointer; font-weight:600;}
+    .list-btn { background: #fff; border-radius:17px; box-shadow: 0 4px 14px rgba(75,110,250,0.07); font-weight:700; color:#132263; font-size:1.08em; padding:15px 20px; margin:7px 0; display:flex; align-items:center; justify-content:space-between;}
+    .profile-toggle-btn {display:flex; align-items:center;}
+    .switch {position: relative; display:inline-block; width:46px; height:22px;}
+    .switch input {display:none;}
+    .slider {position: absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#e7ebfd; border-radius:22px;}
+    .slider:before {position:absolute; content:""; height:18px; width:18px; left:3px; bottom:2px; background:#1672ef; border-radius:50%; transition:.3s;}
+    input:checked + .slider:before {transform:translateX(23px);}
+    input:checked + .slider {background:#b7d5f6;}
+    .full-btn-row { display: flex; gap:13px; margin-top:17px; }
+    .action-btn { font-size:1em; border:none; border-radius:16px; padding:17px 12px; cursor:pointer; font-weight:600; }
+    .action-btn:first-child {background:#eef2fe; color:#4068ea;}
+    .action-btn:last-child {background:#1672ef; color:#fff;}
+    .modal {display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(44,56,97,0.14);z-index:999;justify-content:center;align-items:center;}
+    .modal-dialog {background:#fff;border-radius:14px;padding:25px 22px 20px 22px;max-width:96vw;width:350px;box-shadow:0 8px 40px rgba(40,70,190,0.11);}
+    .modal-title {font-weight:700;font-size:1.15em;}
+    .modal-close {position:absolute;right:30px;top:17px;background:none;border:none;font-size:1.3em;color:#9ca3b7;}
+    .modal-row {margin:10px 0;}
+    .modal input[type="text"], .modal input[type="email"], .modal input[type="file"] {font-size:1.02em;width:100%;margin-top:8px;padding:7px 8px;border:1px solid #c6d6e5;border-radius:9px;}
+    .modal-save {background:#1672ef;color:#fff;border:none;border-radius:12px;padding:10px 0;width:100%;font-weight:700;font-size:1.08em;margin-top:16px;}
+    .modal-list {margin:15px 0 10px 0;max-height:90px;overflow:auto;}
+    .del-btn-list {color:#e4473a;background:#fbe5e7;font-weight:700;border:none;border-radius:14px;margin-left:1em;padding:7px 13px;}
+    .modal-desc {color:#758bae;font-size:.97em;margin:13px 0 2px 0;}
+    .modal-radio {margin:9px 0 10px 0;}
+    .modal-radio label{display:block;margin-bottom: 7px;cursor:pointer;}
+    .studentid-back {position:absolute;left:22px;top:22px;background:#eef2fe;border-radius:12px;border:none;padding:7px 18px;font-weight:700;color:#4068ea;cursor:pointer;}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:65px;z-index:99;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.99em;gap:4px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.7em;}
+    @media(max-width:540px){.container{padding:10px 0 80px 0;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="location.href='Home.html'">Back</button>
+      <div>
+        <span class="profile-title">Profile</span>
+        <div class="profile-sub">Manage account, child, and preferences</div>
+      </div>
+      <button class="safe-btn">Family Safe</button>
+    </div>
+    <!-- Guardian Card (has profile pic) -->
+    <div class="profile-card">
+      <div class="p-main">
+        <img id="profilePic" src="https://via.placeholder.com/58x58?text=" class="profile-pic" alt="Guardian pic" onclick="document.getElementById('profilePicInput').click()" title="Click to change photo"/>
+        <input type="file" accept="image/*" id="profilePicInput" style="display:none;">
+        <div class="p-info">
+          <span class="p-name" id="profileName"></span>
+          <span class="p-role" id="profileRole"></span>
+          <span class="p-email" id="profileEmail"></span>
+        </div>
+      </div>
+      <button class="edit-btn" onclick="openProfileEdit()">Edit</button>
+    </div>
+    <div class="pair-row">
+      <div class="card">
+        <div class="card-title">Payment</div>
+        <div class="card-main" id="cardMain"></div>
+        <a class="card-link" href="#" onclick="showPaymentsModal()">Manage methods</a>
+      </div>
+      <div class="card">
+        <div class="card-title">Addresses</div>
+        <div class="card-main" id="addressMain"></div>
+        <a class="card-link" href="#" onclick="showAddrModal()">Pickup & drop-off</a>
+      </div>
+    </div>
+    <div class="section-label">Child</div>
+    <div id="allChildrenSection"></div>
+    <div class="child-card">
+      <div class="child-vertical">
+        <span class="child-name" id="childName"></span>
+        <span class="child-class" id="childClass"></span>
+      </div>
+      <div>
+        <button class="small-btn" onclick="showStudentID()">Student ID</button>
+        <button class="small-btn" onclick="location.href='alerts.html'">Alert rules</button>
+      </div>
+    </div>
+    <div class="list-btn" onclick="showTripModal()">
+      Ride schedule <span style="color:#7082ab;font-weight:500;" id="tripSubText"></span>
+    </div>
+    <div class="list-btn" onclick="showContactsModal()">
+      Trusted contacts <span style="color:#7082ab;font-weight:500;">Pickup delegates and backups</span>
+    </div>
+    <div class="list-btn" onclick="showPinModal()">
+      Safety preferences <span style="color:#7082ab;font-weight:500;">Verification and drop-off PIN</span>
+    </div>
+    <div class="section-label" style="margin-top:18px;">Notifications</div>
+    <div class="list-btn profile-toggle-btn">
+      Ride updates 
+      <label class="switch">
+        <input type="checkbox" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="list-btn profile-toggle-btn">
+      Safety alerts 
+      <label class="switch">
+        <input type="checkbox">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="full-btn-row">
+      <button class="action-btn" onclick="location.href='ai_assistant.html'">Ask AI about my profile</button>
+      <button class="action-btn" onclick="location.href='alerts.html'">Manage Alerts</button>
+    </div>
+  </div>
+  <!-- Modals and nav identical as above (same as prior code block) -->
+  <div class="modal" id="profileEditModal">
+    <div class="modal-dialog" style="position:relative;">
+      <button class="modal-close" onclick="closeProfileEdit()">×</button>
+      <div class="modal-title">Edit Profile</div>
+      <div class="modal-row">
+        <label>Name
+          <input type="text" id="editProfileName">
+        </label>
+      </div>
+      <div class="modal-row">
+        <label>Email
+          <input type="email" id="editProfileEmail">
+        </label>
+      </div>
+      <div class="modal-row">
+        <label>Role
+          <input type="text" id="editProfileRole">
+        </label>
+      </div>
+      <button class="modal-save" onclick="saveProfileEdit()">Save</button>
+    </div>
+  </div>
+  <div class="modal" id="paymentsModal">
+    <div class="modal-dialog" style="position:relative;">
+      <button class="modal-close" onclick="closePaymentsModal()">×</button>
+      <div class="modal-title">Payment Methods</div>
+      <div class="modal-list" id="paymentList"></div>
+    </div>
+  </div>
+  <div class="modal" id="addrModal">
+    <div class="modal-dialog" style="position:relative;">
+      <button class="modal-close" onclick="closeAddrModal()">×</button>
+      <div class="modal-title">Edit Address</div>
+      <div class="modal-row">
+        <label>Address:
+          <input type="text" id="editAddress">
+        </label>
+      </div>
+      <button class="modal-save" onclick="saveAddressEdit()">Save</button>
+    </div>
+  </div>
+  <div class="modal" id="contactsModal">
+    <div class="modal-dialog" style="position:relative;max-width:410px;">
+      <button class="modal-close" onclick="closeContactsModal()">×</button>
+      <div class="modal-title">Trusted Contacts</div>
+      <div class="modal-row">
+        <input type="text" id="addContactName" placeholder="Name" style="margin-bottom:7px;">
+        <input type="text" id="addContactPhone" placeholder="Phone">
+        <button class="modal-save" onclick="addTrustedContact()" style="margin-top:8px;">Add</button>
+      </div>
+      <div class="modal-list" id="contactsList"></div>
+    </div>
+  </div>
+  <div class="modal" id="tripModal">
+    <div class="modal-dialog" style="position:relative;">
+      <button class="modal-close" onclick="closeTripModal()">×</button>
+      <div class="modal-title">Select Trip Type</div>
+      <div class="modal-radio">
+        <label><input type="radio" name="tripType" value="One way"> One way (pickup or drop only)</label>
+        <label><input type="radio" name="tripType" value="Pick and Drop"> Pick and Drop (both)</label>
+      </div>
+      <button class="modal-save" onclick="saveTripType()">Save</button>
+    </div>
+  </div>
+  <div class="modal" id="studentIDModal" style="z-index:1200;">
+    <div class="modal-dialog" style="text-align:center;position:relative;">
+      <button class="studentid-back" onclick="closeStudentID()">Back</button>
+      <div class="modal-title" style="font-size:1.15em;">Student ID</div>
+      <div class="modal-row" id="studentIDField" style="margin-top:13px;font-weight:700;font-size:1.25em;"></div>
+    </div>
+  </div>
+  <div class="modal" id="pinModal">
+    <div class="modal-dialog" style="position:relative;text-align:center;">
+      <button class="modal-close" onclick="closePinModal()">×</button>
+      <div class="modal-title">Pickup & Drop-off PIN</div>
+      <div class="modal-desc">For enhanced safety. Valid for selected ride type:</div>
+      <div style="margin:12px 0;">
+        <b>Pickup PIN:</b>
+        <span id="pickupPin" style="font-size:1.30em;">----</span>
+      </div>
+      <div style="margin:12px 0;">
+        <b>Drop-off PIN:</b>
+        <span id="dropPin" style="font-size:1.30em;">----</span>
+      </div>
+      <button class="modal-save" onclick="genPins()">Generate New PINs</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span>
+      Home
+    </div>
+    <div class="nav-btn" onclick="location.href='rides.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span>
+      Rides
+    </div>
+    <div class="nav-btn" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span>
+      Track
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span>
+      Alerts
+    </div>
+    <div class="nav-btn active" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span>
+      Profile
+    </div>
+  </nav>
+  <script>
+    function renderProfile() {
+      const acc = JSON.parse(localStorage.getItem('account') || '{}');
+      document.getElementById('profileName').textContent = acc.name || 'Name?';
+      document.getElementById('profileEmail').textContent = acc.email || '';
+      document.getElementById('profileRole').textContent = acc.role || 'Primary guardian &bull;';
+      // Load profile photo (default or upload)
+      let profPic = acc.photo || localStorage.getItem('profilePic') || 'https://via.placeholder.com/58x58?text=';
+      document.getElementById('profilePic').src = profPic;
+
+      const pmeth = JSON.parse(localStorage.getItem('paymentMethods') || '[]');
+      document.getElementById('cardMain').textContent = pmeth.length ? pmeth[0].summary : '—';
+      const addr = localStorage.getItem('address') || 'Not set';
+      document.getElementById('addressMain').textContent = addr;
+
+      // CHILD info
+      const children = JSON.parse(localStorage.getItem('children') || '[]');
+      if(children.length) {
+        const child = children[0];
+        document.getElementById('childName').textContent = child.name || 'Child';
+        document.getElementById('childClass').textContent = (child.grade || '') + (child.school ? ' • ' + child.school : '');
+      }
+      let tripType = localStorage.getItem('tripType') || 'Pick and Drop';
+      document.getElementById('tripSubText').textContent = tripType;
+    }
+
+    // Profile picture upload from card
+    document.getElementById('profilePicInput').addEventListener('change', function(e){
+      const file = e.target.files[0];
+      if(file){
+        const reader = new FileReader();
+        reader.onload = function(evt){
+          let acc = JSON.parse(localStorage.getItem('account') || '{}');
+          acc.photo = evt.target.result;
+          localStorage.setItem('account', JSON.stringify(acc));
+          localStorage.setItem('profilePic', evt.target.result);
+          renderProfile();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Edit Profile
+    function openProfileEdit() {
+      const acc = JSON.parse(localStorage.getItem('account') || '{}');
+      document.getElementById('editProfileName').value = acc.name || '';
+      document.getElementById('editProfileEmail').value = acc.email || '';
+      document.getElementById('editProfileRole').value = acc.role || '';
+      document.getElementById('profileEditModal').style.display = 'flex';
+    }
+    function closeProfileEdit() {
+      document.getElementById('profileEditModal').style.display = 'none';
+    }
+    function saveProfileEdit() {
+      let acc = JSON.parse(localStorage.getItem('account') || '{}');
+      acc.name = document.getElementById('editProfileName').value;
+      acc.email = document.getElementById('editProfileEmail').value;
+      acc.role = document.getElementById('editProfileRole').value;
+      // Profile photo remains unchanged here
+      localStorage.setItem('account', JSON.stringify(acc));
+      closeProfileEdit();
+      renderProfile();
+    }
+
+    // Payment Modal
+    function showPaymentsModal() {
+      const pmeth = JSON.parse(localStorage.getItem('paymentMethods') || '[]');
+      let html = '';
+      pmeth.forEach((m,i) => {
+        html += `<div style="margin-bottom:7px;">
+        <b>${m.type}:</b> ${m.summary} ${(m.primary ? '<span style="font-size:.95em;color:#1672ef;">(Primary)</span>' : '')}
+        </div>`;
+      });
+      if(!pmeth.length) html = 'No payment methods yet.';
+      document.getElementById('paymentList').innerHTML = html;
+      document.getElementById('paymentsModal').style.display = 'flex';
+    }
+    function closePaymentsModal() {
+      document.getElementById('paymentsModal').style.display = 'none';
+    }
+    function showAddrModal() {
+      document.getElementById('editAddress').value = localStorage.getItem('address') || '';
+      document.getElementById('addrModal').style.display = 'flex';
+    }
+    function closeAddrModal() {
+      document.getElementById('addrModal').style.display = 'none';
+    }
+    function saveAddressEdit() {
+      localStorage.setItem('address', document.getElementById('editAddress').value);
+      closeAddrModal();
+      renderProfile();
+    }
+    function showStudentID() {
+      let sid = localStorage.getItem('studentID');
+      if(!sid) {
+        sid = 'STU' + Math.floor(100000 + Math.random()*900000);
+        localStorage.setItem('studentID', sid);
+      }
+      document.getElementById('studentIDField').textContent = sid;
+      document.getElementById('studentIDModal').style.display = 'flex';
+    }
+    function closeStudentID() {
+      document.getElementById('studentIDModal').style.display = 'none';
+    }
+    function showContactsModal() {
+      renderContacts();
+      document.getElementById('contactsModal').style.display = 'flex';
+    }
+    function closeContactsModal() {
+      document.getElementById('contactsModal').style.display = 'none';
+    }
+    function addTrustedContact() {
+      let name = document.getElementById('addContactName').value.trim();
+      let ph = document.getElementById('addContactPhone').value.trim();
+      if(!name||!ph) return;
+      let arr = JSON.parse(localStorage.getItem('contacts')||'[]');
+      arr.push({name,ph});
+      localStorage.setItem('contacts',JSON.stringify(arr));
+      renderContacts();
+      document.getElementById('addContactName').value='';
+      document.getElementById('addContactPhone').value='';
+    }
+    function removeContact(i) {
+      let arr = JSON.parse(localStorage.getItem('contacts')||'[]');
+      arr.splice(i,1);
+      localStorage.setItem('contacts',JSON.stringify(arr));
+      renderContacts();
+    }
+    function renderContacts() {
+      let arr = JSON.parse(localStorage.getItem('contacts')||'[]');
+      let html = '';
+      arr.forEach((c,i)=> {
+        html+=`<div>${c.name} (${c.ph}) <button class='del-btn-list' onclick='removeContact(${i})'>Remove</button></div>`;
+      });
+      if(!html) html="No trusted contacts yet.";
+      document.getElementById('contactsList').innerHTML = html;
+    }
+    function showTripModal() {
+      let typ = localStorage.getItem('tripType') || 'Pick and Drop';
+      document.querySelectorAll("input[name='tripType']").forEach(r=>{
+        r.checked=(r.value === typ);
+      });
+      document.getElementById('tripModal').style.display = 'flex';
+    }
+    function saveTripType() {
+      let rad = Array.from(document.querySelectorAll("input[name='tripType']")).find(r=>r.checked);
+      let val = rad ? rad.value : 'Pick and Drop';
+      localStorage.setItem('tripType', val);
+      closeTripModal();
+      renderProfile();
+    }
+    function closeTripModal() {
+      document.getElementById('tripModal').style.display = 'none';
+    }
+    function showPinModal() {
+      genPins();
+      document.getElementById('pinModal').style.display = 'flex';
+    }
+    function closePinModal() {
+      document.getElementById('pinModal').style.display = 'none';
+    }
+    function genPins() {
+      const pickup = Math.floor(1000+Math.random()*9000), drop = Math.floor(1000+Math.random()*9000);
+      document.getElementById('pickupPin').textContent = pickup;
+      document.getElementById('dropPin').textContent = drop;
+      localStorage.setItem('PINs', JSON.stringify({pickup, drop}));
+    }
+   window.onload = function() {
+  renderProfile();
+  renderAllChildrenCards();
+}
+  </script>
+</body>
+</html>

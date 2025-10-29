@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Alerts – ASAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 520px; margin: 0 auto; padding: 0 0 80px 0; }
+    .top-row {display:flex;align-items:center;justify-content:center;margin:2px 0 15px 0;}
+    .back-btn {background:none; border:none; color:#4068ea; font-size:1.16em; font-weight:600; cursor:pointer;position:absolute;left:10px;top:18px;}
+    .page-title {font-size:2.1em; font-weight:800; color:#14216c;}
+    .page-subtitle { color: #b3bbc7; font-size:1.14em; margin-top:-8px;}
+    .filter-card {background:#fff;border-radius:20px;box-shadow:0 4px 12px rgba(75,110,250,0.06);padding:18px 17px 14px 17px;margin-bottom:18px;}
+    .filter-row {display:flex;align-items:center;justify-content:space-between;}
+    .filter-label {color:#7d8ba6;font-size:1.07em;}
+    .filter-pills {display:flex;gap:10px;margin-left:14px;}
+    .filter-pill {background:#eef2fe;border-radius:15px;color:#1a254b;font-weight:600;padding:9px 20px;font-size:1.04em;border:none;cursor:pointer;transition:.15s;}
+    .filter-pill.selected {background:#1672ef;color:#fff;}
+    .filter-pill.deselect {background:#fbe4e7;color:#cf4747;}
+    .alert-item {background:#fff;border-radius:18px;box-shadow:0 4px 11px rgba(75,110,250,0.06);padding:20px 18px 14px 18px;margin-bottom:13px;}
+    .alert-header {display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;}
+    .alert-title {font-size:1.16em;font-weight:700;color:#1a254b;margin-bottom:4px;}
+    .alert-meta {color:#8b99b4;font-size:1.01em;}
+    .alert-time {color:#aab2c7;font-size:1.01em;margin-top:2px;}
+    .alert-actions {display:flex;gap:9px;margin-top:12px;}
+    .alert-btn {background:#eef2fe;color:#1672ef;border:none;border-radius:12px;font-weight:600;font-size:1.02em;padding:8px 16px;cursor:pointer;}
+    .alert-btn.primary {background:#1672ef;color:#fff;}
+    .prefs-title {color:#7d8ba6;font-size:1.1em;font-weight:600;margin:26px 0 8px 0;}
+    .pref-item {background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(75,110,250,0.05);padding:18px 19px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;}
+    .pref-label {font-size:1.12em;font-weight:600;color:#1a254b;}
+    .pref-meta {color:#8b99b4;font-size:1em;margin-top:2px;}
+    .switch {position:relative;display:inline-block;width:48px;height:26px;}
+    .switch input {display:none;}
+    .slider {position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#e7ebfd;border-radius:24px;transition:.3s;}
+    .slider:before {position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:#1672ef;border-radius:50%;transition:.3s;}
+    input:checked + .slider:before {transform:translateX(22px);}
+    input:checked + .slider {background:#b7d5f6;}
+    .bottom-cta-row {display:flex;gap:13px;justify-content:center;margin:22px 0 8px 0;}
+    .cta-btn {background:#f4f8fe;color:#1672ef;border:none;font-size:1.12em;font-weight:700;border-radius:19px;padding:17px 0;width:47%;box-shadow:0 3px 7px rgba(100,110,190,0.04);}
+    .cta-btn.primary {background:#1672ef;color:#fff;width:51%;}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:64px;z-index:10;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.98em;gap:4px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.7em;}
+    .driver-detail-alert {margin-top:8px;padding:13px 14px 8px 14px;background:#f6f8fc;border-radius:13px;font-size:1.06em;color:#364e7c;}
+    .driver-detail-alert b {color:#193671;}
+    @media(max-width:520px){.container{padding:0 0 55px 0;}}
+    .hide {display:none;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row" style="position:relative;">
+      <button class="back-btn" onclick="history.back()">Back</button>
+      <div>
+        <span class="page-title">Alerts</span>
+        <div class="page-subtitle">Notifications and safety updates</div>
+      </div>
+    </div>
+    <div class="filter-card">
+      <div class="filter-row">
+        <span class="filter-label">Filter</span>
+        <div class="filter-pills">
+          <button class="filter-pill selected" id="rideFilter" onclick="setFilter('ride')">Ride</button>
+          <button class="filter-pill" id="safetyFilter" onclick="setFilter('safety')">Safety</button>
+          <button class="filter-pill" id="chatbotFilter" onclick="setFilter('chatbot')">Chatbot</button>
+          <button class="filter-pill deselect" id="filterDeselect" style="display:none;" onclick="resetFilter()">Deselect</button>
+        </div>
+      </div>
+    </div>
+    <!-- Ride Alerts -->
+    <div class="alert-item alert-ride" id="pickupAlert">
+      <div class="alert-header">
+        <div>
+          <div class="alert-title" id="pickupAlertTitle"></div>
+          <div class="alert-meta" id="pickupAlertMeta"></div>
+        </div>
+        <div class="alert-time">07:10</div>
+      </div>
+      <div class="alert-actions">
+        <button class="alert-btn primary" onclick="location.href='track.html'">Track</button>
+      </div>
+    </div>
+    <div class="alert-item alert-ride">
+      <div class="alert-header">
+        <div>
+          <div class="alert-title">Driver assigned</div>
+          <div class="alert-meta">Driver and vehicle details below</div>
+        </div>
+        <div class="alert-time">06:55</div>
+      </div>
+      <div class="driver-detail-alert" id="driverDetailAlert"></div>
+    </div>
+    <!-- Safety Alerts -->
+    <div class="alert-item alert-safety hide">
+      <div class="alert-header">
+        <div>
+          <div class="alert-title">Live camera is available</div>
+          <div class="alert-meta">Front dash stream ready to view</div>
+        </div>
+        <div class="alert-time">07:05</div>
+      </div>
+      <div class="alert-actions">
+        <button class="alert-btn primary" onclick="alert('Opening camera')">Watch</button>
+      </div>
+    </div>
+    <!-- Chatbot Alerts -->
+    <div class="alert-item alert-chatbot hide">
+      <div class="alert-header">
+        <div>
+          <div class="alert-title">AI Assistant: Your daily ride summary is ready</div>
+          <div class="alert-meta">Tap to view suggestions & feedback</div>
+        </div>
+        <div class="alert-time">08:00</div>
+      </div>
+      <div class="alert-actions">
+        <button class="alert-btn primary" onclick="location.href='ai_assistant.html'">Open AI Assistant</button>
+      </div>
+    </div>
+    <div class="prefs-title">Alert preferences</div>
+    <div class="pref-item">
+      <div>
+        <div class="pref-label">Pickup reminders</div>
+        <div class="pref-meta"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="prefPickup" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="pref-item">
+      <div>
+        <div class="pref-label">Drop-off confirmations</div>
+        <div class="pref-meta"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="prefDrop" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="pref-item">
+      <div>
+        <div class="pref-label">Live camera notifications</div>
+        <div class="pref-meta"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="prefLiveCam">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="pref-item">
+      <div>
+        <div class="pref-label">Driver/vehicle changes</div>
+        <div class="pref-meta"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="prefDriver" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="bottom-cta-row">
+      <button class="cta-btn" onclick="location.href='ai_assistant.html'">Ask AI about alerts</button>
+      <button class="cta-btn primary" onclick="enableAllPrefs()">Enable pickup alerts</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn" onclick="location.href='ridesetup.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span> Track
+    </div>
+    <div class="nav-btn active" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script>
+    // Dynamic: Populate pickup&drop and driver info from storage
+    function fillRideAndDriverAlerts() {
+      const pickup = localStorage.getItem('pickupLocation') || 'Pickup';
+      const drop = localStorage.getItem('dropLocation') || 'Drop';
+      document.getElementById('pickupAlertTitle').textContent =
+        `Pickup approaching: 2 minutes`;
+      document.getElementById('pickupAlertMeta').textContent =
+        `${pickup} → ${drop}`;
+      // Driver details (as per track.html conventions)
+      let name = "Amit Chopra", ph = "+91-9812345678", vehicle = "Maruti Suzuki Ertiga", plate="DL8CAF5037";
+      let rating = "4.8 ★ (2,150 rides)", exp="7+ years";
+      let info = `<b>Name:</b> ${name}<br><b>Phone:</b> <a href='tel:${ph}'>${ph}</a><br><b>Vehicle:</b> ${vehicle}<br><b>Plate:</b> ${plate}<br><b>Rating:</b> ${rating}<br><b>Experience:</b> ${exp}`;
+      document.getElementById('driverDetailAlert').innerHTML = info;
+    }
+
+    // ------- Filter Logic -----------
+    let currentFilter = 'ride';
+    function setFilter(type) {
+      document.getElementById('rideFilter').classList.remove('selected');
+      document.getElementById('safetyFilter').classList.remove('selected');
+      document.getElementById('chatbotFilter').classList.remove('selected');
+      document.getElementById('filterDeselect').style.display = '';
+      currentFilter = type;
+      document.getElementById(type + 'Filter').classList.add('selected');
+      // Hide/show
+      showFilteredAlerts(type);
+    }
+    function resetFilter() {
+      document.getElementById('rideFilter').classList.remove('selected');
+      document.getElementById('safetyFilter').classList.remove('selected');
+      document.getElementById('chatbotFilter').classList.remove('selected');
+      document.getElementById('filterDeselect').style.display = 'none';
+      document.querySelectorAll('.alert-ride,.alert-safety,.alert-chatbot').forEach(e => e.classList.remove('hide'));
+      currentFilter = null;
+    }
+    function showFilteredAlerts(type) {
+      document.querySelectorAll('.alert-ride,.alert-safety,.alert-chatbot').forEach(e => e.classList.add('hide'));
+      document.querySelectorAll('.alert-' + type).forEach(e => e.classList.remove('hide'));
+    }
+
+    // When "Enable pickup alerts" pressed, all switches ON
+    function enableAllPrefs() {
+      document.getElementById('prefPickup').checked = true;
+      document.getElementById('prefDrop').checked = true;
+      document.getElementById('prefLiveCam').checked = true;
+      document.getElementById('prefDriver').checked = true;
+      alert("All alert preferences enabled!");
+    }
+
+    window.onload = function() {
+      fillRideAndDriverAlerts();
+      setFilter('ride'); // show ride type by default
+    };
+  </script>
+</body>
+</html>

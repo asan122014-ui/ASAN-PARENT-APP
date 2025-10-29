@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Assistant – ASAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 380px; margin: 0 auto; padding: 0 0 70px 0;}
+    .top-row {display:flex;align-items:center;justify-content:space-between;margin:5px 0 8px 0;}
+    .back-btn {background:none; border:none; color:#4068ea; font-size:1.12em; font-weight:600; cursor:pointer;}
+    .page-title {font-size:1.4em; font-weight:700; color:#14216c;}
+    .page-meta { color: #b3bbc7; font-size:1.04em;}
+    .profile-btn {background:#eef2fe;color:#4068ea;border-radius:18px;font-size:1.04em;font-weight:600;padding:7px 15px;border:none;}
+    .chat-card {background:#fff; border-radius:15px; box-shadow:0 4px 13px rgba(75,110,250,0.07);padding:15px 13px 14px 13px;margin-bottom:21px;}
+    .assistant-title {font-weight:700; font-size:1em; color:#132263;}
+    .assistant-sub {color:#a4aebb;font-size:.98em;margin-bottom:10px;}
+    .bubble-row {margin-bottom:17px;}
+    .bubble {background:#eaf2ff; border-radius:14px; padding:14px 18px; font-size:1.06em; color:#142158; display:inline-block; margin-bottom:8px; margin-top:2px;}
+    .user-bubble {background:#1672ef; color:#fff; float:right;}
+    .preset-list {margin-bottom:7px;}
+    .preset-btn {background:#eef2fe; color:#1672ef; border:none; border-radius:13px; font-size:1em; font-weight:600; padding:12px 15px; margin:5px 6.5px 0 0; cursor:pointer; display:inline-block;}
+    .input-row {position:fixed;left:0;right:0;bottom:51px;max-width:380px;margin:auto;background:#f6f8fc;display:flex;gap:7px;padding:13px 9px;box-shadow:0 -2px 14px rgba(75,110,250,0.03);}
+    .chat-input {flex:1;font-size:1.1em;padding:13px 19px;border-radius:15px;border:none;background:#fff;outline:none;}
+    .send-btn {background:#1672ef;color:#fff;border:none;font-weight:700;font-size:1.13em;border-radius:12px;padding:10px 23px;cursor:pointer;}
+    .voice-btn {background:#eef2fe;color:#4068ea;border:none;border-radius:11px;font-weight:700;font-size:1.05em;padding:10px 15px;cursor:pointer;margin-right:6px;}
+    .past-btn {background:#eef2fe;color:#163263;border:none;font-weight:600;font-size:1.07em;border-radius:13px;padding:14px 8px;margin-top:10px;width:100%;display:block;}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:52px;z-index:11;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.98em;gap:2px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.4em;}
+    @media(max-width:420px){.container{padding:0 0 60px 0;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="history.back()">Back</button>
+      <div>
+        <span class="page-title">Ask AI</span>
+        <div class="page-meta">Personalized help with your profile</div>
+      </div>
+      <button class="profile-btn" onclick="alert('Call +1 555-123-4567?')">&#x260E; +1 (555)<br>123-4567</button>
+    </div>
+    <div class="chat-card">
+      <div class="assistant-title">Assistant</div>
+      <div class="assistant-sub">Here to help with payments, alerts, and safety</div>
+      <div id="chat-window">
+        <div class="bubble-row"><div class="bubble">
+        Hi Sarah! I can manage your notification settings, update payment methods, and adjust safety preferences for Emma. What would you like to do?</div></div>
+      </div>
+      <div class="preset-list">
+        <button class="preset-btn" onclick="sendQuestion('Set quiet hours 9p–6a')">Set quiet hours 9p–6a</button>
+        <button class="preset-btn" onclick="sendQuestion('Update card on file')">Update card on file</button>
+        <button class="preset-btn" onclick="sendQuestion('Change drop-off PIN')">Change drop-off PIN</button>
+        <button class="preset-btn" onclick="sendQuestion('Add trusted contact')">Add trusted contact</button>
+      </div>
+      <button class="past-btn" onclick="alert('Show past conversations')"><span class="material-icons" style="vertical-align:middle;margin-right:5px;">history</span>View past conversations</button>
+    </div>
+  </div>
+  <div class="input-row">
+    <input class="chat-input" placeholder="Type your question..." id="userInput" onkeydown="if(event.key==='Enter'){sendUserInput();}">
+    <button class="voice-btn" onclick="alert('Voice input coming soon!')"><span class="material-icons" style="vertical-align:middle;">keyboard_voice</span> Voice</button>
+    <button class="send-btn" onclick="sendUserInput()">Send</button>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn" onclick="location.href='ridesetup.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span> Track
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn active" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script>
+    // Predefined Q&A for demo!
+    const aiAnswers = {
+      "Set quiet hours 9p–6a": "Quiet hours set from 9:00 PM to 6:00 AM. You won't receive non-urgent notifications during these hours.",
+      "Update card on file": "To update your payment card, please provide the new card details in your secure profile settings.",
+      "Change drop-off PIN": "To protect Emma, please enter your new drop-off PIN in the popup. I can walk you through.",
+      "Add trusted contact": "You can add a trusted pickup delegate or backup by entering their name and mobile in the Trusted Contacts section.",
+      "Hi": "Hello! How can I assist you today? You can ask about rides, payments, safety, or preferences.",
+      "Hey": "Hi there! How can I assist?",
+      "View past conversations": "You can review your recent chats with the AI Assistant here, including all previous requests and updates.",
+      "Who are you?": "I'm your ASAN AI Assistant, here to help schedule rides, manage preferences, update alerts, and more!"
+    };
+    function sendQuestion(q) {
+      addUserBubble(q);
+      setTimeout(() => addAIBubble(aiAnswers[q] || "Sorry, I don't have a predefined answer for that yet."), 350);
+    }
+    function sendUserInput() {
+      const input = document.getElementById("userInput");
+      if (!input.value.trim()) return;
+      addUserBubble(input.value);
+      setTimeout(() => addAIBubble(aiAnswers[input.value.trim()] || 
+        "I'm still learning! For now, I can help with ride scheduling, account, payment, PIN and safety questions."), 350);
+      input.value = "";
+    }
+    function addUserBubble(text) {
+      document.getElementById("chat-window").innerHTML += '<div class="bubble-row" style="text-align:right"><div class="bubble user-bubble">'+escapeHTML(text)+'</div></div>';
+      autoscroll();
+    }
+    function addAIBubble(text) {
+      document.getElementById("chat-window").innerHTML += '<div class="bubble-row"><div class="bubble">'+escapeHTML(text)+'</div></div>';
+      autoscroll();
+    }
+    function autoscroll() {
+      let chat = document.getElementById("chat-window");
+      chat.scrollTop = chat.scrollHeight;
+    }
+    function escapeHTML(txt) {
+      return txt.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    }
+  </script>
+</body>
+</html>

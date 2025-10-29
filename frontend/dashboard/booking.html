@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Ride – Step 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 500px; margin: 0 auto; padding: 0 0 90px 0; }
+    .top-row { display:flex;align-items:center;justify-content:space-between;margin:2px 0 17px 0;}
+    .back-btn {background:none; border:none; color:#4068ea; font-size:1.1em; font-weight:600; cursor:pointer;}
+    .page-title {font-size:2em; font-weight:700; color:#14216c;}
+    .title-sub {color:#7082ab;font-size:1.07em;margin-top:-12px;margin-bottom:15px;}
+    .ask-ai-btn { background: #eef2fe; color: #4068ea; border:none; border-radius:18px; padding:8px 22px; font-size:1.08em; font-weight: 600; cursor:pointer;}
+    .details-card {background:#fff; border-radius:20px; box-shadow: 0 4px 14px rgba(75,110,250,0.08); padding:22px 18px 18px 18px; margin-bottom:20px;}
+    .child-row {display:flex;align-items:center;margin-bottom:17px;}
+    .child-avatar {width:54px;height:54px;border-radius:50%; background:#e8efff; object-fit:cover;}
+    .child-info {margin-left:13px;}
+    .child-name {font-size:1.25em;font-weight:700;color:#1a254b;}
+    .child-detail {color:#7082ab;font-size:1em;}
+    .dots { margin-left:auto; color:#bec7df; margin-top:5px;}
+    .dots .on {color:#2b66e5;}
+    .form-row {margin-bottom:18px;}
+    .form-label {color:#7082ab;font-size:1em;font-weight:600;margin-bottom:6px;}
+    .pill-row {display:flex;gap:16px;}
+    .pill-btn {background:#eef2fe; color:#1a254b; border:none;border-radius:18px;font-weight:600; font-size:1.11em; padding:13px 24px; cursor:pointer;transition:.18s;}
+    .pill-btn.selected {background:#1672ef; color:#fff;}
+    .wide-input, .pill-row input[type="text"], .pill-row input[type="time"] {
+      width: 100%; background: #f6f8fc; border: none; border-radius: 16px; font-size:1.12em; font-weight:600; color:#191f30;
+      padding: 16px 20px; margin-bottom:10px; outline:none;box-shadow: 0 1px 4px rgba(100,120,210,0.03);}
+    .mini-row {display:flex;gap:16px;}
+    .mini-row input, .mini-row select {
+      background: #f6f8fc; border: none; border-radius: 16px; font-size:1.12em; font-weight:600; color:#191f30;
+      padding: 15px 15px; margin-bottom:10px; outline:none;width:100%;box-shadow: 0 1px 4px rgba(100,120,210,0.03);}
+    .route-card {background:#fff; border-radius:17px; box-shadow: 0 4px 13px rgba(75,110,250,0.07); padding:15px 14px 11px 14px; margin-bottom:16px;}
+    .route-top { display: flex; align-items: center;}
+    .route-recommend {background:#19c776; color:#fff; font-weight:700; font-size:1em; padding:7px 16px; border-radius:20px; margin-right:9px;}
+    .route-desc {color: #7082ab; font-size:.99em;}
+    .route-options {margin:8px 0 0 0;}
+    .route-option {background:#f6f8fc; border-radius:14px; padding:13px 12px; display:flex; align-items:center; justify-content:space-between;margin-bottom:10px;}
+    .option-label-main {font-size:1.14em; font-weight:700;}
+    .option-select-btn {background:#eef2fe; border:none; color:#1672ef; font-weight:700; font-size:1.13em; border-radius:17px; padding:8px 22px; cursor:pointer;}
+    .save-btn {position:relative;bottom:0;left:0; right:0;background: #f4f8fe; color:#1672ef; border: none; font-size:1.15em; font-weight:700; border-radius:19px; padding:20px 2px; width:47%;box-shadow: 0 3px 7px rgba(100,110,190,0.03);}
+    .primary-btn {float:right;background:#1672ef;color:#fff;border:none;border-radius:19px;font-size:1.15em;font-weight:700;padding:19px 0;width:49%;box-shadow: 0 4px 12px rgba(22,114,239,.10);}
+    .action-row {display:flex;gap:13px; justify-content:center;margin-bottom:7px;}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:65px;z-index:10;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.97em;gap:4px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.7em;}
+    @media(max-width:500px) {.container{padding:0 0 70px 0;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="history.back()">Back</button>
+      <div>
+        <span class="page-title">New Ride</span>
+        <div class="title-sub">Step 1 of 3 &bull; Details</div>
+      </div>
+      <button class="ask-ai-btn" onclick="alert('AI Help')">Ask AI</button>
+    </div>
+    <div class="details-card">
+      <div class="child-row">
+        <img src="https://randomuser.me/api/portraits/women/22.jpg" class="child-avatar" />
+        <div class="child-info">
+          <div class="child-name">Emma Johnson</div>
+          <div class="child-detail">Grade 3 &bull; ID 2451</div>
+        </div>
+        <div class="dots">
+          <span class="material-icons on" style="font-size:1em;">fiber_manual_record</span>
+          <span class="material-icons" style="font-size:1em;">fiber_manual_record</span>
+          <span class="material-icons" style="font-size:1em;">fiber_manual_record</span>
+        </div>
+      </div>
+      <!-- Trip type pills -->
+      <div class="form-label" style="margin-top:10px;">Trip type</div>
+      <div class="pill-row" style="margin-bottom:13px;">
+        <button class="pill-btn selected" id="onewayBtn" onclick="setTripType('one-way')">One-way</button>
+        <button class="pill-btn" id="roundtripBtn" onclick="setTripType('round-trip')">Round trip</button>
+      </div>
+      <!-- Date -->
+      <div class="form-label">Date</div>
+      <input class="wide-input" type="text" id="dateInput" readonly value="Today, 7 Nov 2025" />
+      <!-- Pickup and return time -->
+      <div class="mini-row">
+        <div style="flex:1;">
+          <div class="form-label">Pickup time</div>
+          <input type="time" id="pickupTime" value="07:30" class="wide-input"/>
+        </div>
+        <div style="flex:1;">
+          <div class="form-label">Return time</div>
+          <input type="time" id="returnTime" value="15:15" class="wide-input"/>
+        </div>
+      </div>
+      <!-- Pickup & drop -->
+      <div class="form-label">Pickup</div>
+      <input class="wide-input" id="pickupLoc" type="text" value="125 Garden St, Apt 4B" />
+      <div class="form-label">Drop-off</div>
+      <input class="wide-input" id="dropLoc" type="text" value="Greenwood Elementary" />
+      <!-- Seats & Guardian -->
+      <div class="mini-row">
+        <div style="flex:1;">
+          <div class="form-label">Seat</div>
+          <input type="text" class="wide-input" id="seatNum" value="1 Child" />
+        </div>
+        <div style="flex:1;">
+          <div class="form-label">Guardian</div>
+          <input type="text" class="wide-input" id="guardianName" value="Mom (Primary)" />
+        </div>
+      </div>
+    </div>
+    <div class="route-card">
+      <div class="route-top">
+        <span class="route-recommend">Recommended</span>
+        <span class="route-desc" style="margin-left:9px;margin-right:8px;">Based on home-to-school route</span>
+        <span class="route-desc" style="margin-left:auto;">Auto-fill</span>
+      </div>
+      <div class="route-options">
+        <div class="route-option">
+          <div class="option-label-main"><strong>Fastest</strong> &bull; 18–22 min <div class="route-desc">Low traffic &bull; Toll free</div></div>
+          <button class="option-select-btn" onclick="selectRoute('fastest')">Select</button>
+        </div>
+        <div class="route-option">
+          <div class="option-label-main"><strong>Safe</strong> &bull; 25 min <div class="route-desc">Fewer stops &bull; Scenic</div></div>
+          <button class="option-select-btn" onclick="selectRoute('safe')">Select</button>
+        </div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="save-btn" onclick="alert('Ride preset saved!')">Save as preset</button>
+      <button class="primary-btn" onclick="continueToVehicle()">Continue to Vehicle</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn active" onclick="location.href='ridesetup.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span> Track
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script>
+    // Pill highlight for trip type
+    function setTripType(type) {
+      if(type === 'one-way') {
+        document.getElementById('onewayBtn').classList.add('selected');
+        document.getElementById('roundtripBtn').classList.remove('selected');
+      } else {
+        document.getElementById('onewayBtn').classList.remove('selected');
+        document.getElementById('roundtripBtn').classList.add('selected');
+      }
+    }
+    function selectRoute(name) {
+      alert('You selected the ' + name + ' route.');
+    }
+    function continueToVehicle() {
+      alert("Continue to next step (Choose Vehicle).");
+      // window.location.href = "vehicle.html";
+    }
+  </script>
+</body>
+</html>

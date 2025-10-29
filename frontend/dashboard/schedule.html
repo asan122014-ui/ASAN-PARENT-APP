@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Schedule Setup – ASAN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0;}
+    .container { max-width: 480px; margin: 0 auto; padding: 0 0 85px 0; }
+    .top-row { display:flex;align-items:center;justify-content:space-between;margin:2px 0 17px 0;}
+    .back-btn {background:#eef2fe; border:none; color:#4068ea; font-size:1.14em; font-weight:600; cursor:pointer; border-radius:15px; padding:7px 22px;}
+    .page-title {font-size:2em; font-weight:700; color:#14216c;}
+    .title-sub {color:#7082ab;font-size:1.1em;margin-top:-12px;margin-bottom:13px;}
+    .ask-ai-btn { background: #eef2fe; color: #4068ea; border:none; border-radius:16px; padding:8px 20px; font-size:1.03em; font-weight: 600; cursor:pointer;}
+    .schedule-card {background:#fff; border-radius:20px; box-shadow:0 4px 11px rgba(75,110,250,0.06); padding:22px 18px 20px 18px; margin-bottom:23px;}
+    .details-row {display:flex;align-items:center;margin-bottom:12px;}
+    .avatar-lg {display:none;}
+    .name-info {margin-left:13px;}
+    .name-main {display:none;}
+    .name-detail {display:none;}
+    .week-row {display:flex;gap:10px;margin:15px 0 20px 0; justify-content:space-between;}
+    .week-btn { background:#eef2fe; border-radius:14px; color:#132263; font-size:1.13em; font-weight:600;
+      padding:9px 0 6px 0; width:39px;text-align:center; border:none; cursor:pointer; transition:.15s;}
+    .week-btn.selected { background:#1672ef; color:#fff;}
+    .t-row {display:flex;gap:14px;}
+    .triplabel {font-size:1em;color:#7082ab; font-weight:600; margin-top:17px;}
+    .time-btn {background:#f6f8fc;border:none;border-radius:14px;padding:13px 15px; font-size:1.1em;font-weight:700;margin-right:7px; cursor:pointer; color:#132263;width:120px;}
+    .repeat-row {display:flex;gap:11px;margin:18px 0;}
+    .repeat-pill {background:#eef2fe;border-radius:12px;padding:8.5px 20px;font-size:1.04em;color:#29457b;font-weight:600;cursor:pointer;}
+    .repeat-pill.selected {background:#1672ef;color:#fff;}
+    .switch-row { display: flex; align-items: center; margin:14px 0 0 0;}
+    .switch-label {color:#7082ab;font-size:1.05em;font-weight:500;margin-right:19px;}
+    .switch {position: relative; display: inline-block; width: 46px; height: 24px;}
+    .switch input { display: none; }
+    .slider {position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#e7ebfd;border-radius:22px;}
+    .slider:before {position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#1672ef;border-radius:50%;transition:.3s;}
+    input:checked + .slider:before {transform:translateX(22px);}
+    input:checked + .slider {background:#b7d5f6;}
+    .footer-row {display:flex; gap:12px; justify-content:center; margin-top:29px;}
+    .footer-btn {background:#f4f8fe; color:#1672ef; border:none; font-size:1.12em;font-weight:700; border-radius:19px; padding:18px 0; width:46%;box-shadow:0 3px 7px rgba(100,110,190,0.04);}
+    .primary-btn {background:#1672ef;color:#fff;border:none;border-radius:19px;font-size:1.14em;font-weight:700;padding:18px 0;width:52%;box-shadow:0 4px 11px rgba(22,114,239,.10);}
+    .bottom-nav {position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eaeaea;display:flex;justify-content:space-around;align-items:center;height:65px;z-index:10;}
+    .nav-btn {display:flex;flex-direction:column;align-items:center;font-size:0.97em;gap:4px;font-weight:600;cursor:pointer;color:#7082ab;}
+    .nav-btn.active {color:#1672ef;}
+    .nav-btn-icon {font-size:1.7em;}
+    @media(max-width:500px){.container{padding:0 0 60px 0;} .footer-row{margin-top:14px;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-row">
+      <button class="back-btn" onclick="location.href='location.html'">
+        <span class="material-icons" style="vertical-align:middle;font-size:1.12em;margin-right:7px;">arrow_back</span>
+        Back
+      </button>
+      <div>
+        <span class="page-title">Schedule</span>
+        <div class="title-sub">Set up recurring rides or alternate times</div>
+      </div>
+      <button class="ask-ai-btn" onclick="alert('AI Help')">Ask AI</button>
+    </div>
+    <div class="schedule-card">
+      <!-- Rider, route info (hidden per requirements) -->
+      <div class="details-row" style="margin-bottom:17px;">
+        <img src="" class="avatar-lg" />
+        <div class="name-info">
+          <div class="name-main"></div>
+          <div class="name-detail"></div>
+        </div>
+      </div>
+      <div class="triplabel">Pick days</div>
+      <div class="week-row">
+        <button class="week-btn" id="monBtn" onclick="toggleDay('monBtn')">M</button>
+        <button class="week-btn" id="tueBtn" onclick="toggleDay('tueBtn')">T</button>
+        <button class="week-btn" id="wedBtn" onclick="toggleDay('wedBtn')">W</button>
+        <button class="week-btn" id="thuBtn" onclick="toggleDay('thuBtn')">T</button>
+        <button class="week-btn" id="friBtn" onclick="toggleDay('friBtn')">F</button>
+        <button class="week-btn" id="satBtn" onclick="toggleDay('satBtn')">S</button>
+        <button class="week-btn" id="sunBtn" onclick="toggleDay('sunBtn')">S</button>
+      </div>
+      <div class="triplabel">Pickup time</div>
+      <div class="t-row">
+        <input class="time-btn" id="pickup" type="time" placeholder="Pickup time"/>
+      </div>
+      <div class="triplabel">Drop-off time</div>
+      <div class="t-row">
+        <input class="time-btn" id="drop" type="time" placeholder="Drop time"/>
+      </div>
+      <div style="margin:15px 0 0 0;">
+        <span class="triplabel" style="margin-bottom:2px;margin-right:8px;">Repeat</span>
+        <span class="repeat-row">
+          <span class="repeat-pill selected" id="weeklyBtn" onclick="setRepeat('weeklyBtn')">Weekly</span>
+          <span class="repeat-pill" id="dailyBtn" onclick="setRepeat('dailyBtn')">Daily</span>
+          <span class="repeat-pill" id="monthlyBtn" onclick="setRepeat('monthlyBtn')">Monthly</span>
+          <span class="repeat-pill" id="noneBtn" onclick="setRepeat('noneBtn')">None</span>
+        </span>
+      </div>
+      <div class="switch-row">
+        <span class="switch-label">Enable notifications</span>
+        <label class="switch">
+          <input id="notifSwitch" type="checkbox" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="footer-row">
+        <button class="footer-btn" onclick="savePreset()">Save preset</button>
+        <button class="primary-btn" onclick="confirmSchedule()">Confirm schedule</button>
+      </div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <div class="nav-btn" onclick="location.href='home.html'">
+      <span class="material-icons nav-btn-icon">home</span> Home
+    </div>
+    <div class="nav-btn active" onclick="location.href='ridesetup.html'">
+      <span class="material-icons nav-btn-icon">directions_bus</span> Rides
+    </div>
+    <div class="nav-btn" onclick="location.href='track.html'">
+      <span class="material-icons nav-btn-icon">timeline</span> Track
+    </div>
+    <div class="nav-btn" onclick="location.href='alerts.html'">
+      <span class="material-icons nav-btn-icon">notifications_none</span> Alerts
+    </div>
+    <div class="nav-btn" onclick="location.href='profile.html'">
+      <span class="material-icons nav-btn-icon">person_outline</span> Profile
+    </div>
+  </nav>
+  <script>
+    // Load preset if present
+    function loadPreset() {
+      const preset = JSON.parse(localStorage.getItem('schedulePreset') || '{}');
+      ['monBtn','tueBtn','wedBtn','thuBtn','friBtn','satBtn','sunBtn'].forEach(id => {
+        document.getElementById(id).classList.remove('selected');
+        if (preset.days && preset.days.includes(id)) document.getElementById(id).classList.add('selected');
+      });
+      document.getElementById('pickup').value = preset.pickup || '';
+      document.getElementById('drop').value = preset.drop || '';
+      ['weeklyBtn','dailyBtn','monthlyBtn','noneBtn'].forEach(id => {
+        document.getElementById(id).classList.remove('selected');
+      });
+      if (preset.repeat) {
+        const repIds = {'Weekly':'weeklyBtn','Daily':'dailyBtn','Monthly':'monthlyBtn','None':'noneBtn'};
+        if (repIds[preset.repeat]) document.getElementById(repIds[preset.repeat]).classList.add('selected');
+        else document.getElementById('weeklyBtn').classList.add('selected');
+      } else {
+        document.getElementById('weeklyBtn').classList.add('selected');
+      }
+      document.getElementById('notifSwitch').checked = (preset.notifications !== false);
+    }
+    window.onload = loadPreset;
+
+    function toggleDay(btnId) {
+      var btn = document.getElementById(btnId);
+      btn.classList.toggle('selected');
+    }
+    function setRepeat(selectedId) {
+      ['weeklyBtn','dailyBtn','monthlyBtn','noneBtn'].forEach(id => {
+        document.getElementById(id).classList.remove('selected');
+      });
+      document.getElementById(selectedId).classList.add('selected');
+    }
+
+    function savePreset() {
+      const childObj = JSON.parse(localStorage.getItem('children') || '[]')[0] || {};
+      const child = childObj.name || '';
+      const days = ['monBtn','tueBtn','wedBtn','thuBtn','friBtn','satBtn','sunBtn'].filter(id =>
+        document.getElementById(id).classList.contains('selected'));
+      const pickup = document.getElementById('pickup').value;
+      const drop = document.getElementById('drop').value;
+      let repeat = 'Weekly';
+      if(document.getElementById('dailyBtn').classList.contains('selected')) repeat = 'Daily';
+      if(document.getElementById('monthlyBtn').classList.contains('selected')) repeat = 'Monthly';
+      if(document.getElementById('noneBtn').classList.contains('selected')) repeat = 'None';
+      const notifications = document.getElementById('notifSwitch').checked;
+      const preset = { child, days, pickup, drop, repeat, notifications };
+      localStorage.setItem('schedulePreset', JSON.stringify(preset));
+      alert('Preset saved!');
+    }
+
+    function confirmSchedule() {
+      savePreset();
+      window.location.href = 'vehicle.html';
+    }
+  </script>
+</body>
+</html>

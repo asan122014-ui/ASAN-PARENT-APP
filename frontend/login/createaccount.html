@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Your Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background:#F6F8FC;font-family:'Inter',Helvetica,Arial,sans-serif; }
+    .container { max-width:420px;margin:40px auto;background:#fff;border-radius:22px;box-shadow:0 8px 32px rgba(60,80,220,0.07);padding:32px 28px 24px 28px;}
+    .header-flex {display:flex;justify-content:flex-end;align-items:center;margin-bottom:12px;}
+    .family-safe-btn {background:#EEF2FE;padding:7px 22px;border-radius:20px;font-weight:500;color:#4068EA;border:none;font-size:1em;cursor:pointer;}
+    .welcome {font-size:1.42em;font-weight:800;color:#1A254B;}
+    .subtitle {color:#7082AB;font-size:1em;margin-bottom:3px;}
+    .progress {height:7px;width:100%;background:#EEF2FE;border-radius:6px;overflow:hidden;margin-bottom:18px;}
+    .progress-bar {height:7px;width:30%;background:#4068EA;}
+    label {color:#7082AB;font-size:1em;font-weight:500;margin-top:17px;display:block;margin-bottom:6px;text-align:left;}
+    .input-group {display:flex;align-items:center;border:1.7px solid #EEF2FE;border-radius:14px;padding:8px 8px 8px 2px;background:#F9FAFB;margin-bottom:10px;}
+    .input-group input {border:none;background:none;font-size:1.1em;font-weight:500;outline:none;width:100%;}
+    .input-group span {margin-left:auto;cursor:pointer;}
+    .agreement {margin-bottom:12px;display:flex;align-items:center;}
+    .agreement input[type="checkbox"] {width:18px;height:18px;margin-right:7px;}
+    .action-buttons {display:flex;justify-content:flex-end;margin-top:24px;}
+    .send-otp-btn {background:#1960F2;border:none;padding:12px 30px;color:#fff;border-radius:13px;font-weight:600;font-size:1em;cursor:pointer;}
+    .country-code { background:#EEF2FE;border-radius:10px;font-weight:600;font-size:1.1em;padding:6px 11px;margin-right:6px;color:#4068EA;border:none;outline:none;}
+    .otp-wrapper { display:flex;gap:13px;justify-content:center;margin-bottom:10px;}
+    .otp-wrapper input { width:48px;height:48px;text-align:center;font-size:1.5em;font-weight:600;border:1.7px solid #EEF2FE;border-radius:14px;background:#F9FAFB;}
+    .resend-link { font-size:0.99em;color:#4068EA;cursor:pointer;}
+    .err-text {color: #d20b3e; font-size:0.98em; margin:2px 0 7px 0;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-flex">
+      <button class="family-safe-btn">Family Safe</button>
+    </div>
+    <div class="welcome">Create your account</div>
+    <div class="subtitle">Step 1 of 3 &bull; Basics</div>
+    <div class="progress"><div class="progress-bar"></div></div>
+    <label for="fullname">Full name</label>
+    <div class="input-group">
+      <input type="text" id="fullname" placeholder="Your Name" value=""/>
+    </div>
+    <label for="useremail">Email address</label>
+    <div class="input-group">
+      <input type="email" id="useremail" placeholder="Email" value=""/>
+    </div>
+    <label for="phonenumber">Mobile number</label>
+    <div class="input-group">
+      <select class="country-code" id="countrycode"><option value="+91">+91</option></select>
+      <input type="text" id="phonenumber" maxlength="14" placeholder="Mobile number" value=""/>
+    </div>
+    <button class="send-otp-btn" style="margin-bottom:10px;" onclick="sendOtp()">Send OTP</button>
+    <div class="otp-wrapper">
+      <input type="text" maxlength="1" id="otp1" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp2')" />
+      <input type="text" maxlength="1" id="otp2" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp3')" />
+      <input type="text" maxlength="1" id="otp3" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp4')" />
+      <input type="text" maxlength="1" id="otp4" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp5')" />
+      <input type="text" maxlength="1" id="otp5" autocomplete="off" inputmode="numeric" pattern="\d*" oninput="moveToNext(this, 'otp6')" />
+      <input type="text" maxlength="1" id="otp6" autocomplete="off" inputmode="numeric" pattern="\d*" />
+    </div>
+    <div class="err-text" id="otpErr"></div>
+    <label for="password">Password</label>
+    <div class="input-group">
+      <input type="password" id="password" placeholder="Password" value=""/>
+      <span onclick="togglePassword('password')">&#128065;</span>
+    </div>
+    <label for="confirmpassword">Confirm</label>
+    <div class="input-group">
+      <input type="password" id="confirmpassword" placeholder="Confirm Password" value=""/>
+      <span onclick="togglePassword('confirmpassword')">&#128274;</span>
+    </div>
+    <div class="agreement">
+      <input type="checkbox" id="agree"/>
+      <label for="agree" style="margin:0;color:#7082AB;font-size:.98em;">
+        I agree to the Terms and Privacy Policy
+      </label>
+    </div>
+    <div class="action-buttons">
+      <button class="send-otp-btn" onclick="proceed()">Continue &rarr;</button>
+    </div>
+  </div>
+  <script>
+    let generatedOtp = "";
+    let verifiedPhone = "";
+
+    function isPhoneValid(num) {
+      // For India, match 10 digit numbers, allow whitespace
+      return /^[6-9]\d{9}$/.test(num.replace(/\D+/g,''));
+    }
+
+    function sendOtp() {
+      let phoneInput = document.getElementById('phonenumber');
+      let phoneVal = phoneInput.value.replace(/\D+/g, '');
+      if(!isPhoneValid(phoneVal)){
+        document.getElementById('otpErr').textContent = 'Enter a valid 10-digit mobile number before requesting OTP.';
+        phoneInput.focus();
+        return;
+      }
+      document.getElementById('otpErr').textContent = '';
+      generatedOtp = ('000000' + Math.floor(Math.random() * 1000000)).slice(-6);
+      verifiedPhone = phoneVal;
+      alert("Your OTP is: " + generatedOtp + " (for demo/testing only)");
+      // Reset OTP inputs
+      for(let i=1;i<=6;i++) document.getElementById('otp'+i).value = "";
+      document.getElementById('otp1').focus();
+    }
+
+    function moveToNext(current, nextId) {
+      if(current.value.length >= 1){
+        var next = document.getElementById(nextId);
+        if(next) next.focus();
+      }
+    }
+
+    function togglePassword(fieldId) {
+      var input = document.getElementById(fieldId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function proceed() {
+      var fullname = document.getElementById('fullname').value.trim();
+      var email = document.getElementById('useremail').value.trim();
+      var countryCode = document.getElementById('countrycode').value;
+      var phone = document.getElementById('phonenumber').value.replace(/\D+/g, '');
+      var password = document.getElementById('password').value;
+      var confirmpassword = document.getElementById('confirmpassword').value;
+      var agree = document.getElementById('agree').checked;
+      var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      // Validate mobile & OTP
+      let enteredOtp = "";
+      for(var i=1;i<=6;i++) enteredOtp += document.getElementById('otp'+i).value||"";
+      if (!fullname) { alert("Please enter your full name."); return; }
+      if (!email || !emailPattern.test(email)) { alert("Please enter a valid email address."); return; }
+      if(!phone || !isPhoneValid(phone)){ alert("Enter a valid 10-digit mobile number."); return; }
+      if(!generatedOtp) { alert("Please request and enter the OTP."); return; }
+      if(enteredOtp !== generatedOtp){ document.getElementById('otpErr').textContent = "Incorrect OTP. Please try again."; return; }
+      document.getElementById('otpErr').textContent = "";
+      if (!password || password.length < 6) { alert("Password must be at least 6 characters."); return; }
+      if (password !== confirmpassword) { alert("Passwords do not match."); return; }
+      if (!agree) { alert("You must agree to the Terms and Privacy Policy."); return; }
+
+      // Save to localStorage
+      localStorage.setItem('userName', fullname);
+      localStorage.setItem('userEmail', email);
+      let parentContact = JSON.parse(localStorage.getItem('parentContact')) || {};
+      parentContact.guardian = fullname;
+      parentContact.phone = countryCode + ' ' + phone;
+      localStorage.setItem('parentContact', JSON.stringify(parentContact));
+      window.location.href = "email.html";
+    }
+  </script>
+</body>
+</html>

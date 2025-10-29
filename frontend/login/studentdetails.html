@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Child(ren) Details</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background:#F6F8FC;font-family:'Inter',Helvetica,Arial,sans-serif;}
+    .container { max-width:500px;margin:40px auto;background:#fff;border-radius:22px;box-shadow:0 8px 32px rgba(60,80,220,0.07);padding:32px 28px 24px 28px;}
+    .family-safe-btn {background:#EEF2FE;padding:7px 22px;border-radius:20px;font-weight:500;color:#4068EA;border:none;font-size:1em;cursor:pointer;float:left;}
+    .welcome {font-size:1.5em;font-weight:800;color:#1A254B;margin-top:38px;}
+    .subtitle {color:#7082AB;font-size:1em;margin-bottom:6px;}
+    .progress {height:7px;width:100%;background:#EEF2FE;border-radius:6px;overflow:hidden;margin-bottom:18px;}
+    .progress-bar {height:7px;width:100%;background:#4068EA;}
+    label {color:#7082AB;font-size:1em;font-weight:500;margin-top:15px;display:block;margin-bottom:7px;text-align:left;}
+    .input-group {display:flex;align-items:center;border:1.5px solid #EEF2FE;border-radius:14px;padding:8px 8px;background:#F9FAFB;margin-bottom:17px;}
+    .input-group input {border:none;background:none;font-size:1.1em;font-weight:500;outline:none;width:100%;}
+    .continue-btn {background:#1672EF;border:none;color:#fff;border-radius:13px;font-weight:600;font-size:1.1em;cursor:pointer;margin:10px 0 8px 0;width:100%;padding:14px 0;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="family-safe-btn">Family Safe</button>
+    <div class="welcome">Add your child’s details</div>
+    <div class="subtitle">Step 3 of 3 &bull; Add Child</div>
+    <div class="progress"><div class="progress-bar"></div></div>
+    <label for="numChildren">Number of children to register</label>
+    <div class="input-group">
+      <input type="number" id="numChildren" min="1" max="10" placeholder="e.g. 2" required />
+    </div>
+    <button class="continue-btn" onclick="saveAndGo()">Finish &rarr;</button>
+  </div>
+  <script>
+    function saveAndGo() {
+      var n = parseInt(document.getElementById('numChildren').value, 10);
+      if(isNaN(n) || n < 1 || n > 10){
+        alert("Please enter a valid number between 1 and 10.");
+        return;
+      }
+      // Save number to localStorage for later retrieval if needed
+      localStorage.setItem('numChildren', n);
+      // Optionally clear any previous child details if you want a fresh start:
+      // localStorage.removeItem('children');
+      window.location.href = "../dashboard/Home.html";
+    }
+  </script>
+</body>
+</html>

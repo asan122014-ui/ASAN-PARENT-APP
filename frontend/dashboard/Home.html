@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ASAN Parent Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { background: #f6f8fc; font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; }
+    .container { padding: 30px 20px 72px 20px; max-width: 540px; margin: 0 auto; }
+    .profile-row { display: flex; align-items: center; justify-content:space-between; }
+    .profile-info { display: flex; align-items: center; gap: 14px; }
+    .profile-avatar { 
+      border-radius: 50%; 
+      width: 54px; 
+      height: 54px; 
+      background: #e5e7eb; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: #6b7280; 
+      font-size: 1.5em; 
+      font-weight: 600;
+      cursor:pointer;
+      overflow:hidden;
+    }
+    .profile-avatar img {width:100%;height:100%;border-radius:50%;object-fit:cover;}
+    .profile-welcome { color: #7082ab; font-size: 1.08em; margin-bottom: 2px; }
+    .profile-name { color: #1a254b; font-weight: 700; font-size: 1.34em; }
+    .safety-btn { background: #eef2fe; color: #4068ea; border: none; border-radius: 20px; padding: 7px 22px; font-size: 1em; font-weight: 500; cursor: pointer; }
+    .card { background: #fff; border-radius: 22px; box-shadow: 0 4px 16px rgba(75,110,250,0.07); padding: 28px 28px 22px 28px; margin-top: 28px; display:flex; align-items: center; justify-content:space-between; }
+    .card-info { max-width: 66%; }
+    .card-title { font-size: 1.36em; font-weight: 700; color: #132263; margin-bottom: 6px; }
+    .card-sub { color: #7082ab; font-size: 1em; margin-bottom: 12px; }
+    .card-btn { background: #1672ef; color: #fff; border: none; border-radius: 24px; padding: 18px 32px; font-weight: 600; font-size:1.1em; cursor: pointer; display:inline-flex; align-items:center; gap:8px;}
+    .upcoming-card { background: #fff; border-radius: 22px; box-shadow: 0 4px 16px rgba(75,110,250,0.07); padding: 18px 18px; margin-top:19px;}
+    .upcoming-header {display: flex; align-items:center; justify-content:space-between;}
+    .upcoming-title { color:#7082ab; font-size:1.08em; font-weight: 600;}
+    .upcoming-viewall { background: #eef2fe; color: #4068ea; border-radius: 14px; font-size: 1em; padding: 4px 14px; cursor:pointer; font-weight:500;}
+    .rides-row {display: flex; gap: 16px; margin-top: 17px;}
+    .ride-card {background: #f9fafc; border-radius:16px; padding:16px;width:49%;}
+    .ride-day { color: #1a254b; font-weight:700; font-size:1.12em;}
+    .ride-detail { color:#7082ab; font-size: 1em; font-weight:500; margin-top:4px;}
+    .alerts-card {background:#fff; border-radius:22px; margin-top:20px; box-shadow: 0 4px 16px rgba(75,110,250,0.07); padding:18px;}
+    .alerts-title-row {display:flex; align-items:center; justify-content:space-between;}
+    .alerts-title {color:#7082ab; font-size:1.08em; font-weight:600;}
+    .alerts-mark {background:#eef2fe; color:#4068ea; font-size:1em; padding:3px 13px; border-radius:15px; cursor:pointer; font-weight:500;}
+    .alert-chips-row {display:flex; gap:12px; margin-top:11px; flex-wrap: wrap;}
+    .alert-chip { background: #eef2fe; color: #132263; border-radius:16px; padding:10px 17px; font-size:1em; font-weight:600;}
+    .alert-chip-active { background: #dbe7ff; border:2px solid #1672ef;}
+    .alert-chat-btn {background:#ffe381; border-radius:50%; border:none; width:50px; height:50px; display:flex; align-items:center; justify-content:center; position:absolute; right:24px; bottom:110px;}
+    .alert-chat-icon {font-size:1.5em; color:#836228;}
+    .bottom-nav {position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid #eaeaea; display:flex; justify-content:space-around; align-items:center; height:65px;}
+    .nav-btn {display:flex; flex-direction:column; align-items:center; justify-content:center; color:#7082ab; font-size:0.92em; gap:4px; font-weight:600; cursor:pointer;}
+    .nav-btn.active { color:#1672ef; }
+    .nav-btn-icon {font-size:1.7em;}
+    @media(max-width:520px){ .container{padding:20px 0 72px 0;} .card,.upcoming-card,.alerts-card{padding:14px 12px;} }
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+<body>
+  <div class="container">
+    <div class="profile-row">
+      <div class="profile-info">
+        <div class="profile-avatar" onclick="document.getElementById('profileInput').click()" id="avatarDiv">
+          <span class="material-icons" id="avatarIcon">person</span>
+        </div>
+        <input type="file" id="profileInput" style="display:none" accept="image/*" />
+        <div>
+          <div class="profile-welcome">Welcome,</div>
+          <div class="profile-name" id="userName"></div>
+        </div>
+      </div>
+      <button class="safety-btn">Safety</button>
+    </div>
+    <div class="card">
+      <div class="card-info">
+        <div class="card-title">Book a New Ride</div>
+        <div class="card-sub">Quickly schedule your child's pickup and drop</div>
+        <button class="card-btn" onclick="location.href='ride.html'">
+          <span class="material-icons">directions_bus</span>
+          Start Booking
+        </button>
+      </div>
+      <span class="material-icons" style="font-size:2.7em;color:#132263;">school</span>
+    </div>
+    <div class="upcoming-card">
+      <div class="upcoming-header">
+        <span class="upcoming-title">Upcoming</span>
+        <span class="upcoming-viewall" onclick="alert('View all rides')">View all</span>
+      </div>
+      <div class="rides-row" id="ridesRow">
+        <!-- dynamically fill rides here -->
+      </div>
+    </div>
+    <div class="alerts-card">
+      <div class="alerts-title-row">
+        <span class="alerts-title">Alerts</span>
+        <span class="alerts-mark" onclick="alert('Mark read')">Mark read</span>
+      </div>
+      <div class="alert-chips-row">
+        <span class="alert-chip">Bus 12 arriving in 5 min</span>
+        <span class="alert-chip alert-chip-active">Route changed today</span>
+      </div>
+      <button class="alert-chat-btn" onclick="location.href='ai_assistant.html'">
+        <span class="material-icons alert-chat-icon">chat_bubble_outline</span>
+      </button>
+    </div>
+  </div>
+<nav class="bottom-nav">
+  <div class="nav-btn active" onclick="location.href='Home.html'">
+    <span class="material-icons nav-btn-icon">home</span>
+    Home
+  </div>
+  <div class="nav-btn" onclick="location.href='ride.html'">
+    <span class="material-icons nav-btn-icon">directions_bus</span>
+    Rides
+  </div>
+  <div class="nav-btn" onclick="location.href='track.html'">
+    <span class="material-icons nav-btn-icon">timeline</span>
+    Track
+  </div>
+  <div class="nav-btn" onclick="location.href='alert.html'">
+    <span class="material-icons nav-btn-icon">notifications_none</span>
+    Alerts
+  </div>
+  <div class="nav-btn" onclick="location.href='profile.html'">
+    <span class="material-icons nav-btn-icon">person_outline</span>
+    Profile
+  </div>
+</nav>
+<script>
+  function setProfileAvatar() {
+    // Show stored profile photo from profile.html if available
+    var acc = JSON.parse(localStorage.getItem('account') || '{}');
+    var pic = acc.photo || localStorage.getItem('profilePic');
+    var div = document.getElementById('avatarDiv');
+    if(pic) {
+      div.innerHTML = '<img src="' + pic + '" alt="avatar" />';
+    } else {
+      div.innerHTML = '<span class="material-icons" id="avatarIcon">person</span>';
+    }
+  }
+
+  window.onload = function() {
+    // Name from storage (always reflects profile or createaccount.html name!)
+    const acc = JSON.parse(localStorage.getItem('account')||'{}');
+    document.getElementById('userName').textContent = acc.name || 'Parent';
+
+    setProfileAvatar();
+
+    // Rides preview: Example based on localStorage, or use defaults
+    let pickup = localStorage.getItem('pickupLocation') || 'Pickup';
+    let drop = localStorage.getItem('dropLocation') || 'Drop';
+    let ridesRow = document.getElementById('ridesRow');
+    ridesRow.innerHTML = `
+      <div class="ride-card">
+        <div class="ride-day"><span class="material-icons" style="font-size:1.1em;vertical-align:middle;">location_on</span> Mon, 8:00 AM</div>
+        <div class="ride-detail">Pickup: ${pickup} <br>Drop: ${drop}</div>
+      </div>
+      <div class="ride-card">
+        <div class="ride-day"><span class="material-icons" style="font-size:1.1em;vertical-align:middle;">location_on</span> Tue, 8:00 AM</div>
+        <div class="ride-detail">Pickup: ${pickup} <br>Drop: ${drop}</div>
+      </div>
+    `;
+  };
+
+  // Allow photo update here too for demo: saves to same localStorage for use in profile.html as well
+  document.getElementById('profileInput').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(file){
+      const reader = new FileReader();
+      reader.onload = function(evt){
+        let acc = JSON.parse(localStorage.getItem('account') || '{}');
+        acc.photo = evt.target.result;
+        localStorage.setItem('profilePic', evt.target.result);
+        localStorage.setItem('account', JSON.stringify(acc));
+        setProfileAvatar();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+</script>
+</body>
+</html>
