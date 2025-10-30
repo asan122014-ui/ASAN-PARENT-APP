@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const config = require('../config');
 
 // health
 router.get('/ping', (req, res) => res.json({ ok: true, now: Date.now() }));
@@ -134,4 +135,12 @@ router.post('/reviews', async (req, res) => { try { res.json(await db.add('revie
 router.get('/alerts', async (req, res) => { try { res.json(await db.get('alerts')); } catch (e){res.status(500).json({error:e.message});} });
 router.post('/alerts', async (req, res) => { try { res.json(await db.add('alerts', req.body || {})); } catch (e){res.status(500).json({error:e.message});} });
 
+// API key / config status (does NOT return the key)
+router.get('/key-status', (req, res) => {
+  try {
+    res.json({ hasGoogleApiKey: config.hasGoogleApiKey() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
+
