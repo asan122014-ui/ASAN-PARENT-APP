@@ -230,47 +230,72 @@
   <nav class="bottom-nav">
     <div class="nav-btn" onclick="location.href='home.html'">
       <span class="material-icons nav-btn-icon">home</span>
-      Home
-    </div>
-    <div class="nav-btn" onclick="location.href='rides.html'">
-      <span class="material-icons nav-btn-icon">directions_bus</span>
-      Rides
-    </div>
-    <div class="nav-btn" onclick="location.href='track.html'">
-      <span class="material-icons nav-btn-icon">timeline</span>
-      Track
-    </div>
-    <div class="nav-btn" onclick="location.href='alerts.html'">
-      <span class="material-icons nav-btn-icon">notifications_none</span>
-      Alerts
-    </div>
-    <div class="nav-btn active" onclick="location.href='profile.html'">
-      <span class="material-icons nav-btn-icon">person_outline</span>
-      Profile
-    </div>
+      </div>
   </nav>
+
   <script>
-    function renderProfile() {
+    // Render children list into #allChildrenSection
+    function renderAllChildrenCards(children) {
+      children = children || JSON.parse(localStorage.getItem('children') || '[]');
+      const container = document.getElementById('allChildrenSection');
+      if (!container) return;
+      if (!children.length) {
+          container.innerHTML = "<div style='color:#7082ab;padding:10px 0;'>No children added yet.</div>";
+        return;
+      }
+        let parts = [];
+        children.forEach(function(c){
+          parts.push('<div class="child-card">'
+            + '<div class="child-vertical">'
+              + '<span class="child-name">' + (c.name || 'Child') + '</span>'
+              + '<span class="child-class">' + ((c.grade||'') + (c.school ? ' • ' + c.school : '')) + '</span>'
+            + '</div>'
+            + '<div>'
+              + '<button class="small-btn" onclick="showStudentID()">Student ID</button>'
+              + '<button class="small-btn" onclick="location.href=\'alerts.html\'">Alert rules</button>'
+            + '</div>'
+          + '</div>');
+        });
+        container.innerHTML = parts.join('');
+    }
+
+    async function renderProfile() {
+      const stored = JSON.parse(localStorage.getItem('user') || 'null');
+      if (stored && stored.id) {
+        try {
+          const p = await API.getProfile(stored.id);
+          document.getElementById('profileName').textContent = p.name || stored.name || 'Name?';
+          document.getElementById('profileEmail').textContent = p.email || stored.email || '';
+          document.getElementById('profileRole').textContent = p.role || 'Primary guardian •';
+          let profPic = p.photo || localStorage.getItem('profilePic') || 'https://via.placeholder.com/58x58?text=';
+          document.getElementById('profilePic').src = profPic;
+
+          const pmeth = JSON.parse(localStorage.getItem('paymentMethods') || '[]');
+          document.getElementById('cardMain').textContent = pmeth.length ? pmeth[0].summary : '—';
+          const addr = localStorage.getItem('address') || 'Not set';
+          document.getElementById('addressMain').textContent = addr;
+
+          const children = await API.getChildren(stored.id).catch(()=>[]);
+          renderAllChildrenCards(children);
+
+          let tripType = localStorage.getItem('tripType') || 'Pick and Drop';
+          document.getElementById('tripSubText').textContent = tripType;
+          return;
+        } catch (err) {
+          console.error('Failed to load profile from API, falling back to localStorage', err);
+        }
+      }
       const acc = JSON.parse(localStorage.getItem('account') || '{}');
       document.getElementById('profileName').textContent = acc.name || 'Name?';
       document.getElementById('profileEmail').textContent = acc.email || '';
-      document.getElementById('profileRole').textContent = acc.role || 'Primary guardian &bull;';
-      // Load profile photo (default or upload)
+      document.getElementById('profileRole').textContent = acc.role || 'Primary guardian •';
       let profPic = acc.photo || localStorage.getItem('profilePic') || 'https://via.placeholder.com/58x58?text=';
       document.getElementById('profilePic').src = profPic;
-
       const pmeth = JSON.parse(localStorage.getItem('paymentMethods') || '[]');
       document.getElementById('cardMain').textContent = pmeth.length ? pmeth[0].summary : '—';
       const addr = localStorage.getItem('address') || 'Not set';
       document.getElementById('addressMain').textContent = addr;
-
-      // CHILD info
-      const children = JSON.parse(localStorage.getItem('children') || '[]');
-      if(children.length) {
-        const child = children[0];
-        document.getElementById('childName').textContent = child.name || 'Child';
-        document.getElementById('childClass').textContent = (child.grade || '') + (child.school ? ' • ' + child.school : '');
-      }
+      renderAllChildrenCards(JSON.parse(localStorage.getItem('children')||'[]'));
       let tripType = localStorage.getItem('tripType') || 'Pick and Drop';
       document.getElementById('tripSubText').textContent = tripType;
     }
@@ -299,15 +324,12 @@
       document.getElementById('editProfileRole').value = acc.role || '';
       document.getElementById('profileEditModal').style.display = 'flex';
     }
-    function closeProfileEdit() {
-      document.getElementById('profileEditModal').style.display = 'none';
-    }
+    function closeProfileEdit() { document.getElementById('profileEditModal').style.display = 'none'; }
     function saveProfileEdit() {
       let acc = JSON.parse(localStorage.getItem('account') || '{}');
       acc.name = document.getElementById('editProfileName').value;
       acc.email = document.getElementById('editProfileEmail').value;
       acc.role = document.getElementById('editProfileRole').value;
-      // Profile photo remains unchanged here
       localStorage.setItem('account', JSON.stringify(acc));
       closeProfileEdit();
       renderProfile();
@@ -318,108 +340,40 @@
       const pmeth = JSON.parse(localStorage.getItem('paymentMethods') || '[]');
       let html = '';
       pmeth.forEach((m,i) => {
-        html += `<div style="margin-bottom:7px;">
-        <b>${m.type}:</b> ${m.summary} ${(m.primary ? '<span style="font-size:.95em;color:#1672ef;">(Primary)</span>' : '')}
-        </div>`;
+        html += `<div style="margin-bottom:7px;"><b>${m.type}:</b> ${m.summary} ${(m.primary ? '<span style="font-size:.95em;color:#1672ef;">(Primary)</span>' : '')}</div>`;
       });
       if(!pmeth.length) html = 'No payment methods yet.';
       document.getElementById('paymentList').innerHTML = html;
       document.getElementById('paymentsModal').style.display = 'flex';
     }
-    function closePaymentsModal() {
-      document.getElementById('paymentsModal').style.display = 'none';
-    }
-    function showAddrModal() {
-      document.getElementById('editAddress').value = localStorage.getItem('address') || '';
-      document.getElementById('addrModal').style.display = 'flex';
-    }
-    function closeAddrModal() {
-      document.getElementById('addrModal').style.display = 'none';
-    }
-    function saveAddressEdit() {
-      localStorage.setItem('address', document.getElementById('editAddress').value);
-      closeAddrModal();
-      renderProfile();
-    }
-    function showStudentID() {
-      let sid = localStorage.getItem('studentID');
-      if(!sid) {
-        sid = 'STU' + Math.floor(100000 + Math.random()*900000);
-        localStorage.setItem('studentID', sid);
-      }
-      document.getElementById('studentIDField').textContent = sid;
-      document.getElementById('studentIDModal').style.display = 'flex';
-    }
-    function closeStudentID() {
-      document.getElementById('studentIDModal').style.display = 'none';
-    }
-    function showContactsModal() {
-      renderContacts();
-      document.getElementById('contactsModal').style.display = 'flex';
-    }
-    function closeContactsModal() {
-      document.getElementById('contactsModal').style.display = 'none';
-    }
-    function addTrustedContact() {
-      let name = document.getElementById('addContactName').value.trim();
-      let ph = document.getElementById('addContactPhone').value.trim();
-      if(!name||!ph) return;
+    function closePaymentsModal() { document.getElementById('paymentsModal').style.display = 'none'; }
+    function showAddrModal() { document.getElementById('editAddress').value = localStorage.getItem('address') || ''; document.getElementById('addrModal').style.display = 'flex'; }
+    function closeAddrModal() { document.getElementById('addrModal').style.display = 'none'; }
+    function saveAddressEdit() { localStorage.setItem('address', document.getElementById('editAddress').value); closeAddrModal(); renderProfile(); }
+    function showStudentID() { let sid = localStorage.getItem('studentID'); if(!sid){ sid = 'STU'+Math.floor(100000+Math.random()*900000); localStorage.setItem('studentID', sid); } document.getElementById('studentIDField').textContent = sid; document.getElementById('studentIDModal').style.display = 'flex'; }
+    function closeStudentID(){ document.getElementById('studentIDModal').style.display = 'none'; }
+    function showContactsModal(){ renderContacts(); document.getElementById('contactsModal').style.display = 'flex'; }
+    function closeContactsModal(){ document.getElementById('contactsModal').style.display = 'none'; }
+    function addTrustedContact(){ let name=document.getElementById('addContactName').value.trim(); let ph=document.getElementById('addContactPhone').value.trim(); if(!name||!ph) return; let arr=JSON.parse(localStorage.getItem('contacts')||'[]'); arr.push({name,ph}); localStorage.setItem('contacts',JSON.stringify(arr)); renderContacts(); document.getElementById('addContactName').value=''; document.getElementById('addContactPhone').value=''; }
+    function removeContact(i){ let arr=JSON.parse(localStorage.getItem('contacts')||'[]'); arr.splice(i,1); localStorage.setItem('contacts',JSON.stringify(arr)); renderContacts(); }
+    function renderContacts(){
       let arr = JSON.parse(localStorage.getItem('contacts')||'[]');
-      arr.push({name,ph});
-      localStorage.setItem('contacts',JSON.stringify(arr));
-      renderContacts();
-      document.getElementById('addContactName').value='';
-      document.getElementById('addContactPhone').value='';
-    }
-    function removeContact(i) {
-      let arr = JSON.parse(localStorage.getItem('contacts')||'[]');
-      arr.splice(i,1);
-      localStorage.setItem('contacts',JSON.stringify(arr));
-      renderContacts();
-    }
-    function renderContacts() {
-      let arr = JSON.parse(localStorage.getItem('contacts')||'[]');
-      let html = '';
-      arr.forEach((c,i)=> {
-        html+=`<div>${c.name} (${c.ph}) <button class='del-btn-list' onclick='removeContact(${i})'>Remove</button></div>`;
+      let parts = [];
+      arr.forEach(function(c,i){
+        parts.push('<div>' + c.name + ' (' + c.ph + ') <button class="del-btn-list" data-i="'+i+'">Remove</button></div>');
       });
-      if(!html) html="No trusted contacts yet.";
+      let html = parts.join('');
+      if(!html) html='No trusted contacts yet.';
       document.getElementById('contactsList').innerHTML = html;
+      document.querySelectorAll('.del-btn-list').forEach(function(btn){ btn.addEventListener('click', function(){ removeContact(parseInt(btn.dataset.i,10)); }); });
     }
-    function showTripModal() {
-      let typ = localStorage.getItem('tripType') || 'Pick and Drop';
-      document.querySelectorAll("input[name='tripType']").forEach(r=>{
-        r.checked=(r.value === typ);
-      });
-      document.getElementById('tripModal').style.display = 'flex';
-    }
-    function saveTripType() {
-      let rad = Array.from(document.querySelectorAll("input[name='tripType']")).find(r=>r.checked);
-      let val = rad ? rad.value : 'Pick and Drop';
-      localStorage.setItem('tripType', val);
-      closeTripModal();
-      renderProfile();
-    }
-    function closeTripModal() {
-      document.getElementById('tripModal').style.display = 'none';
-    }
-    function showPinModal() {
-      genPins();
-      document.getElementById('pinModal').style.display = 'flex';
-    }
-    function closePinModal() {
-      document.getElementById('pinModal').style.display = 'none';
-    }
-    function genPins() {
-      const pickup = Math.floor(1000+Math.random()*9000), drop = Math.floor(1000+Math.random()*9000);
-      document.getElementById('pickupPin').textContent = pickup;
-      document.getElementById('dropPin').textContent = drop;
-      localStorage.setItem('PINs', JSON.stringify({pickup, drop}));
-    }
-   window.onload = function() {
-  renderProfile();
-  renderAllChildrenCards();
-}
+    function showTripModal(){ let typ=localStorage.getItem('tripType')||'Pick and Drop'; document.querySelectorAll("input[name='tripType']").forEach(r=>{ r.checked=(r.value===typ); }); document.getElementById('tripModal').style.display='flex'; }
+    function saveTripType(){ let rad=Array.from(document.querySelectorAll("input[name='tripType']")).find(r=>r.checked); let val=rad?rad.value:'Pick and Drop'; localStorage.setItem('tripType', val); closeTripModal(); renderProfile(); }
+    function closeTripModal(){ document.getElementById('tripModal').style.display='none'; }
+    function showPinModal(){ genPins(); document.getElementById('pinModal').style.display='flex'; }
+    function closePinModal(){ document.getElementById('pinModal').style.display='none'; }
+    function genPins(){ const pickup=Math.floor(1000+Math.random()*9000), drop=Math.floor(1000+Math.random()*9000); document.getElementById('pickupPin').textContent=pickup; document.getElementById('dropPin').textContent=drop; localStorage.setItem('PINs', JSON.stringify({pickup,drop})); }
+    window.onload = function(){ renderProfile(); }
   </script>
 </body>
 </html>

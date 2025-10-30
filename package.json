@@ -1,0 +1,13 @@
+{
+  "name": "asan-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo root wrapper that starts the backend server",
+  "scripts": {
+    "start": "node backend/server.js",
+    "postinstall": "cd backend && npm install --production"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

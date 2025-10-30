@@ -117,7 +117,7 @@
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
-    function proceed() {
+    async function proceed() {
       var fullname = document.getElementById('fullname').value.trim();
       var email = document.getElementById('useremail').value.trim();
       var countryCode = document.getElementById('countrycode').value;
@@ -140,14 +140,23 @@
       if (password !== confirmpassword) { alert("Passwords do not match."); return; }
       if (!agree) { alert("You must agree to the Terms and Privacy Policy."); return; }
 
-      // Save to localStorage
-      localStorage.setItem('userName', fullname);
-      localStorage.setItem('userEmail', email);
-      let parentContact = JSON.parse(localStorage.getItem('parentContact')) || {};
-      parentContact.guardian = fullname;
-      parentContact.phone = countryCode + ' ' + phone;
-      localStorage.setItem('parentContact', JSON.stringify(parentContact));
-      window.location.href = "email.html";
+      // Register with backend (simple register - stores user)
+      try {
+        const resp = await API.register(email, password, fullname);
+        if (resp && resp.user) {
+          localStorage.setItem('user', JSON.stringify(resp.user));
+          // also save parent contact
+          let parentContact = JSON.parse(localStorage.getItem('parentContact')) || {};
+          parentContact.guardian = fullname;
+          parentContact.phone = countryCode + ' ' + phone;
+          localStorage.setItem('parentContact', JSON.stringify(parentContact));
+          window.location.href = 'email.html';
+        } else {
+          alert('Registration failed');
+        }
+      } catch (err) {
+        alert('Registration error: ' + (err.message || 'failed'));
+      }
     }
   </script>
 </body>
