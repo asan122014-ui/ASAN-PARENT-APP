@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ASAN Parent</string>
+    <string name="title_activity_main">ASAN Parent</string>
+    <string name="package_name">com.asan.parent</string>
+    <string name="custom_url_scheme">com.asan.parent</string>
+</resources>

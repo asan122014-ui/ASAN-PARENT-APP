@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "802587778210",
+    "project_id": "asan-app-4b7ea",
+    "storage_bucket": "asan-app-4b7ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:802587778210:android:b2a228ac9d5a8f04708bfb",
+        "android_client_info": {
+          "package_name": "com.ASAN.Captain"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV3e5DWkyh0occjmbGeB1sQrTJZpBJQBo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:802587778210:android:463fe27d7b5d4a3d708bfb",
+        "android_client_info": {
+          "package_name": "com.asan.parent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV3e5DWkyh0occjmbGeB1sQrTJZpBJQBo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
