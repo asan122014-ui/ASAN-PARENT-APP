@@ -945,7 +945,7 @@ function ChildDetailsStep({
 
           <StackDivider />
 
-          {/* HOME PICKUP TIME */}
+          {/* HOME PICKUP TIME INPUT */}
 
           <div
             className="
@@ -1121,7 +1121,7 @@ function ChildDetailsStep({
 
           <StackDivider />
 
-          {/* SCHOOL PICKUP TIME */}
+          {/* SCHOOL PICKUP TIME INPUT */}
 
           <div
             className="
