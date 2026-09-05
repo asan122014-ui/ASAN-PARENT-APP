@@ -12,8 +12,19 @@ import {
   Check,
 } from "lucide-react";
 
+import {
+  useJsApiLoader,
+} from "@react-google-maps/api";
+
 const GOOGLE_MAPS_API_KEY =
   import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+const GOOGLE_MAPS_LOADER_ID =
+  "asan-parent-google-map";
+
+const GOOGLE_MAP_LIBRARIES = [
+  "places",
+];
 
 /* =========================================================
    MAP PICKER
@@ -26,6 +37,20 @@ function MapPicker({
   onConfirm,
   onBack,
 }) {
+  const {
+    isLoaded: googleMapsLoaded,
+    loadError: googleMapsLoadError,
+  } = useJsApiLoader({
+    id:
+      GOOGLE_MAPS_LOADER_ID,
+
+    googleMapsApiKey:
+      GOOGLE_MAPS_API_KEY || "",
+
+    libraries:
+      GOOGLE_MAP_LIBRARIES,
+  });
+
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
   const markerRef = useRef(null);
@@ -53,56 +78,18 @@ function MapPicker({
   ======================================================= */
 
   useEffect(() => {
-    if (window.google?.maps) {
-      getCurrentLocationAndInitialize();
+    if (
+      !googleMapsLoaded ||
+      googleMapsLoadError
+    ) {
       return;
     }
 
-    const existingScript =
-      document.querySelector(
-        'script[data-asan-google-maps="true"]'
-      );
-
-    if (existingScript) {
-      existingScript.addEventListener(
-        "load",
-        getCurrentLocationAndInitialize
-      );
-
-      return () => {
-        existingScript.removeEventListener(
-          "load",
-          getCurrentLocationAndInitialize
-        );
-      };
-    }
-
-    const script =
-      document.createElement("script");
-
-    script.src =
-      `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
-
-    script.async = true;
-    script.defer = true;
-
-    script.dataset.asanGoogleMaps =
-      "true";
-
-    script.addEventListener(
-      "load",
-      getCurrentLocationAndInitialize
-    );
-
-    document.head.appendChild(script);
-
-    return () => {
-      script.removeEventListener(
-        "load",
-        getCurrentLocationAndInitialize
-      );
-    };
-  }, []);
+    getCurrentLocationAndInitialize();
+  }, [
+    googleMapsLoaded,
+    googleMapsLoadError,
+  ]);
 
   /* =======================================================
      GET CURRENT LOCATION FIRST

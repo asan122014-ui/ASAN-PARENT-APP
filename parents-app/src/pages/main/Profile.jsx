@@ -58,6 +58,13 @@ import {
 const GOOGLE_MAPS_API_KEY =
   import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+const GOOGLE_MAPS_LOADER_ID =
+  "asan-parent-google-map";
+
+const GOOGLE_MAP_LIBRARIES = [
+  "places",
+];
+
 const mapContainerStyle = {
   width: "100%",
   height: "100%",
@@ -99,9 +106,14 @@ function Profile({
     isLoaded: mapsLoaded,
     loadError: mapsLoadError,
   } = useJsApiLoader({
-    id: "asan-parent-google-map",
+    id:
+      GOOGLE_MAPS_LOADER_ID,
+
     googleMapsApiKey:
       GOOGLE_MAPS_API_KEY || "",
+
+    libraries:
+      GOOGLE_MAP_LIBRARIES,
   });
 
   /* =======================================================
