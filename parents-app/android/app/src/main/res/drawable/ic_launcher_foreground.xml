@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- This adds padding around your logo so it fits perfectly in the circle mask -->
+    <!-- Increased horizontal padding to keep the wide text inside the round safe-zone -->
     <item
         android:drawable="@drawable/app_logo"
-        android:top="18dp"
-        android:bottom="18dp"
-        android:left="18dp"
-        android:right="18dp" />
+        android:top="22dp"
+        android:bottom="22dp"
+        android:left="22dp"
+        android:right="22dp" />
 </layer-list>

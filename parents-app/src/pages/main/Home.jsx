@@ -634,14 +634,19 @@ function Home({
     ) ||
     null;
 
-  const latestTrip =
-    activeTrip ||
-    sortedTrips[0] ||
-    null;
+  /* =======================================================
+     CURRENT RIDE DISPLAY
+     -------------------------------------------------------
+     Only the currently active / scheduled ride is shown in
+     the Current Ride card. A completed ride is intentionally
+     not reused as the display trip. This makes the journey
+     progress reset automatically after completion and keeps
+     the card ready for the driver's next scheduled ride.
+  ======================================================= */
 
   const displayTrip =
     activeTrip ||
-    latestTrip;
+    null;
 
   /* =======================================================
      STATUS
@@ -825,9 +830,7 @@ function Home({
         ? "WAITING"
         : activeTrip
           ? "LIVE"
-          : rideCompleted
-            ? "COMPLETED"
-            : "READY";
+          : "READY";
 
   /* =======================================================
      MAIN RIDE TITLE
@@ -853,9 +856,7 @@ function Home({
       ? "We're currently finding a suitable driver for you. You'll be notified as soon as a driver is assigned."
       : activeTrip
         ? "Tap the card to view your child's live journey."
-        : rideCompleted
-          ? "The latest ride has been completed successfully."
-          : "Your driver is assigned. Ride information will appear here when the next trip starts.";
+        : "Your driver is assigned. Ride information will appear here when the next scheduled trip starts.";
 
   /* =======================================================
      UI
