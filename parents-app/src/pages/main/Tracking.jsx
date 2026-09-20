@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -69,6 +70,113 @@ const HYDERABAD = {
   lat: 17.385,
   lng: 78.486,
 };
+
+const normalizeStudentStatus =
+  (
+    value
+  ) => {
+    const status =
+      String(
+        value || ""
+      )
+        .trim()
+        .toLowerCase()
+        .replace(
+          /[\s-]+/g,
+          "_"
+        );
+
+    if (
+      [
+        "picked_up",
+        "pickedup",
+        "on_board",
+        "onboard",
+      ].includes(
+        status
+      )
+    ) {
+      return "onboard";
+    }
+
+    if (
+      [
+        "dropped",
+        "dropped_off",
+        "dropoff",
+      ].includes(
+        status
+      )
+    ) {
+      return "dropped";
+    }
+
+    if (
+      [
+        "absent",
+        "not_picked",
+      ].includes(
+        status
+      )
+    ) {
+      return "absent";
+    }
+
+    return status ===
+      "waiting"
+      ? "waiting"
+      : "unknown";
+  };
+
+const getStoredLocation =
+  (
+    driver
+  ) => {
+    const source =
+      driver?.lastLocation ||
+      driver?.location;
+
+    const coordinates =
+      source?.coordinates;
+
+    const lat =
+      source?.lat ??
+      source?.latitude ??
+      coordinates?.[1];
+
+    const lng =
+      source?.lng ??
+      source?.longitude ??
+      coordinates?.[0];
+
+    const parsedLat =
+      Number(lat);
+
+    const parsedLng =
+      Number(lng);
+
+    if (
+      !Number.isFinite(
+        parsedLat
+      ) ||
+      !Number.isFinite(
+        parsedLng
+      ) ||
+      Math.abs(
+        parsedLat
+      ) > 90 ||
+      Math.abs(
+        parsedLng
+      ) > 180
+    ) {
+      return null;
+    }
+
+    return {
+      lat: parsedLat,
+      lng: parsedLng,
+    };
+  };
 
 /* =========================================================
    MAP STYLE
@@ -181,7 +289,9 @@ function Tracking() {
     fallback,
     setFallback,
   ] =
-    useState(null);
+    useState(
+      HYDERABAD
+    );
 
   /* =======================================================
      ROUTE
@@ -205,14 +315,6 @@ function Tracking() {
   ] =
     useState("--");
 
-  const [
-    tripPhase,
-    setTripPhase,
-  ] =
-    useState(
-      "pickup"
-    );
-
   /* =======================================================
      DATA
   ======================================================= */
@@ -228,6 +330,18 @@ function Tracking() {
     setStudents,
   ] =
     useState([]);
+
+  const tripPhase =
+    students.length > 0 &&
+    !students.some(
+      (
+        student
+      ) =>
+        student.status ===
+        "waiting"
+    )
+      ? "drop"
+      : "pickup";
 
   /* =======================================================
      UI
@@ -308,6 +422,7 @@ function Tracking() {
 
   const {
     isLoaded,
+    loadError,
   } =
     useJsApiLoader({
       id:
@@ -328,43 +443,41 @@ function Tracking() {
     () =>
       !document.hidden;
 
-  const isEvening =
-    () => {
-      const hour =
-        new Date()
-          .getHours();
-
-      return (
-        hour >=
-        12
-      );
-    };
-
   /* =======================================================
      GET STUDENT COORDS
   ======================================================= */
 
   const getCoords =
-    (
-      student
-    ) => {
-      if (
-        tripPhase ===
-        "pickup"
-      ) {
-        return isEvening()
-          ? student
-              .dropLocationCoords
-          : student
-              .location;
-      }
+    useCallback(
+      (
+        student
+      ) => {
+        const isEvening =
+          new Date()
+            .getHours() >=
+          12;
 
-      return isEvening()
-        ? student
-            .location
-        : student
-            .dropLocationCoords;
-    };
+        if (
+          tripPhase ===
+          "pickup"
+        ) {
+          return isEvening
+            ? student
+                .dropLocationCoords
+            : student
+                .location;
+        }
+
+        return isEvening
+          ? student
+              .location
+          : student
+              .dropLocationCoords;
+      },
+      [
+        tripPhase,
+      ]
+    );
 
   /* =======================================================
      MAP MARKER
@@ -414,10 +527,6 @@ function Tracking() {
       !navigator
         .geolocation
     ) {
-      setFallback(
-        HYDERABAD
-      );
-
       return;
     }
 
@@ -462,62 +571,80 @@ function Tracking() {
      FETCH DRIVER + CHILDREN
   ======================================================= */
 
-  useEffect(() => {
-    if (
-      !driverId ||
-      !parentId
-    ) {
-      return;
-    }
-
-    const fetchData =
+  const fetchTrackingData =
+    useCallback(
       async () => {
         if (
-          !isAppActive()
+          !driverId ||
+          !parentId ||
+          document.hidden
         ) {
           return;
         }
 
         try {
-          /* ===============================================
-             LINKED DRIVER
-             PARENT AUTHENTICATED
-          =============================================== */
+          const [
+            driverResponse,
+            childResponse,
+          ] =
+            await Promise.all([
+              API.get(
+                `/driver/tracking?driverId=${encodeURIComponent(
+                  driverId
+                )}`
+              ),
 
-          const driverResponse =
-            await API.get(
-              `/driver/tracking?driverId=${encodeURIComponent(
-                driverId
-              )}`
-            );
+              API.get(
+                `/children/parent/${encodeURIComponent(
+                  parentId
+                )}`
+              ),
+            ]);
 
-          /* ===============================================
-             PARENT CHILDREN
-          =============================================== */
-
-          const childResponse =
-            await API.get(
-              `/children/parent/${encodeURIComponent(
-                parentId
-              )}`
-            );
-
-          /* ===============================================
-             DRIVER
-          =============================================== */
-
-          setDriver(
+          const driverData =
             driverResponse
               .data
               ?.data ||
-              null
+            null;
+
+          setDriver(
+            driverData
           );
 
-          /* ===============================================
-             STUDENTS
-          =============================================== */
+          const storedLocation =
+            getStoredLocation(
+              driverData
+            );
 
-          setStudents(
+          if (
+            storedLocation
+          ) {
+            setPosition(
+              (
+                current
+              ) =>
+                current ||
+                storedLocation
+            );
+
+            setSmoothPosition(
+              (
+                current
+              ) =>
+                current ||
+                storedLocation
+            );
+
+            if (
+              !prevPositionRef
+                .current
+            ) {
+              prevPositionRef.current =
+                storedLocation;
+            }
+          }
+
+          const childData =
             Array.isArray(
               childResponse
                 .data
@@ -526,7 +653,20 @@ function Tracking() {
               ? childResponse
                   .data
                   .data
-              : []
+              : [];
+
+          setStudents(
+            childData.map(
+              (
+                student
+              ) => ({
+                ...student,
+                status:
+                  normalizeStudentStatus(
+                    student.status
+                  ),
+              })
+            )
           );
         } catch (
           error
@@ -539,58 +679,52 @@ function Tracking() {
               error
           );
         }
-      };
+      },
+      [
+        driverId,
+        parentId,
+      ]
+    );
 
-    fetchData();
+  useEffect(() => {
+    const accessToken =
+      localStorage.getItem(
+        "accessToken"
+      );
+
+    if (
+      !driverId ||
+      !parentId ||
+      !accessToken
+    ) {
+      return;
+    }
+
+    const initialFetch =
+      window.setTimeout(
+        fetchTrackingData,
+        0
+      );
 
     const interval =
       window.setInterval(
-        fetchData,
+        fetchTrackingData,
         10000
       );
 
     return () => {
+      window.clearTimeout(
+        initialFetch
+      );
+
       window.clearInterval(
         interval
       );
     };
   }, [
     driverId,
+    fetchTrackingData,
     parentId,
-  ]);
-
-  /* =======================================================
-     PICKUP → DROP
-  ======================================================= */
-
-  useEffect(() => {
-    if (
-      !students.length
-    ) {
-      return;
-    }
-
-    const remainingPickup =
-      students.some(
-        (
-          student
-        ) =>
-          student.status ===
-          "waiting"
-      );
-
-    if (
-      tripPhase ===
-        "pickup" &&
-      !remainingPickup
-    ) {
-      setTripPhase(
-        "drop"
-      );
-    }
-  }, [
-    students,
-    tripPhase,
   ]);
 
   /* =======================================================
@@ -713,9 +847,15 @@ function Tracking() {
   ======================================================= */
 
   useEffect(() => {
+    const accessToken =
+      localStorage.getItem(
+        "accessToken"
+      );
+
     if (
       !driverId ||
-      !parentId
+      !parentId ||
+      !accessToken
     ) {
       return;
     }
@@ -731,6 +871,11 @@ function Tracking() {
 
           reconnection:
             true,
+
+          auth: {
+            token:
+              accessToken,
+          },
         }
       );
 
@@ -760,6 +905,41 @@ function Tracking() {
             driverId,
             parentId,
           }
+        );
+      }
+    );
+
+    socket.on(
+      "connect_error",
+
+      (
+        error
+      ) => {
+        console.error(
+          "Parent tracking socket error:",
+          error.message
+        );
+      }
+    );
+
+    const refreshTripState =
+      () => {
+        fetchTrackingData();
+      };
+
+    [
+      "student_picked_up",
+      "student_dropped",
+      "student_absent",
+      "trip_started",
+      "trip_ended",
+    ].forEach(
+      (
+        eventName
+      ) => {
+        socket.on(
+          eventName,
+          refreshTripState
         );
       }
     );
@@ -1050,8 +1230,7 @@ function Tracking() {
           data?.lat ==
             null ||
           data?.lng ==
-            null ||
-          !window.google
+            null
         ) {
           return;
         }
@@ -1074,6 +1253,17 @@ function Tracking() {
                 data.lng
               ),
           };
+
+        if (
+          !Number.isFinite(
+            newPosition.lat
+          ) ||
+          !Number.isFinite(
+            newPosition.lng
+          )
+        ) {
+          return;
+        }
 
         if (
           prevPositionRef
@@ -1123,10 +1313,28 @@ function Tracking() {
           null;
       }
 
+      [
+        "student_picked_up",
+        "student_dropped",
+        "student_absent",
+        "trip_started",
+        "trip_ended",
+      ].forEach(
+        (
+          eventName
+        ) => {
+          socket.off(
+            eventName,
+            refreshTripState
+          );
+        }
+      );
+
       socket.disconnect();
     };
   }, [
     driverId,
+    fetchTrackingData,
     parentId,
   ]);
 
@@ -1317,6 +1525,18 @@ function Tracking() {
               "--"
           );
         } else {
+          setDirections(
+            null
+          );
+
+          setEta(
+            "--"
+          );
+
+          setDistance(
+            "--"
+          );
+
           console.error(
             "Directions failed:",
             status
@@ -1325,6 +1545,7 @@ function Tracking() {
       }
     );
   }, [
+    getCoords,
     position,
     nextStudent,
     isLoaded,
@@ -1389,7 +1610,14 @@ function Tracking() {
         return "Dropped";
       }
 
-      return "Unknown";
+      if (
+        status ===
+        "absent"
+      ) {
+        return "Absent";
+      }
+
+      return "Status unavailable";
     };
 
   const childStatus =
@@ -1567,6 +1795,67 @@ function Tracking() {
             VITE_GOOGLE_MAPS_API_KEY
             {" "}
             to your frontend environment file.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    loadError
+  ) {
+    return (
+      <div
+        className="
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          bg-[#FFF9EE]
+          px-5
+        "
+      >
+        <div
+          className="
+            w-full
+            max-w-[420px]
+            rounded-[24px]
+            border
+            border-[#F0D98F]
+            bg-white
+            p-7
+            text-center
+            shadow-[0_12px_30px_rgba(91,70,15,0.07)]
+          "
+        >
+          <MapPinned
+            size={32}
+            className="
+              mx-auto
+              text-[#D79500]
+            "
+          />
+
+          <h2
+            className="
+              mt-4
+              text-[18px]
+              font-bold
+              text-black
+            "
+          >
+            Unable to load the map
+          </h2>
+
+          <p
+            className="
+              mt-2
+              text-[11px]
+              leading-5
+              text-zinc-500
+            "
+          >
+            Check your connection and reopen live tracking.
           </p>
         </div>
       </div>
