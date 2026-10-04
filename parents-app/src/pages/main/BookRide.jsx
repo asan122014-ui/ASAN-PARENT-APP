@@ -1,0 +1,70 @@
+import { useState } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle2, MapPin, Route as RouteIcon, UserRound, Search, LoaderCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { API } from "../../api/api";
+import MapPicker from "../../components/MapPicker";
+import { createEmptyChild } from "../auth/onboarding/ChildDetailsStep";
+
+const emptyChild = { ...createEmptyChild(), estimatedDistanceKm: "", estimatedTimeMinutes: "" };
+const emptyRoute = { pickup: "", dropoff: "", distanceKm: "", durationMinutes: "" };
+const routeEstimate = (from, to) => {
+  if (!from || !to) return {};
+  const radians = (value) => (value * Math.PI) / 180;
+  const dLat = radians(to.lat - from.lat);
+  const dLng = radians(to.lng - from.lng);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(from.lat)) * Math.cos(radians(to.lat)) * Math.sin(dLng / 2) ** 2;
+  const distanceKm = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+  return { distanceKm, durationMinutes: Math.max(1, Math.round((distanceKm / 25) * 60)) };
+};
+
+function BookRide() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [child, setChild] = useState(emptyChild);
+  const [route, setRoute] = useState({ ...emptyRoute, pickupCoordinates: null, dropoffCoordinates: null, pickupTime: "", schoolPickupTime: "" });
+  const [vehicleType, setVehicleType] = useState("AUTO");
+  const [mapMode, setMapMode] = useState(null);
+  const [quote, setQuote] = useState(null);
+  const [driverChoice, setDriverChoice] = useState("");
+  const [driverId, setDriverId] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [complete, setComplete] = useState("");
+
+  const update = (setter, key) => (event) => setter((current) => ({ ...current, [key]: event.target.value }));
+  const getQuote = async (event) => {
+    event.preventDefault(); setError(""); setLoading(true);
+    try {
+      const response = await API.post("/bookings/quote", { child: { ...child, count: 1 }, vehicleType, workingDays: 26, route: { ...route, distanceKm: Number(route.distanceKm), durationMinutes: Number(route.durationMinutes || 0) } });
+      setQuote(response.data.data); setStep(2);
+    } catch (err) { setError(err?.response?.data?.message || "Please complete the child and route details."); }
+    finally { setLoading(false); }
+  };
+  const submitRequest = async () => {
+    setError(""); setLoading(true);
+    try {
+      const response = await API.post("/bookings/request", { child, route: quote.route, quote: quote.quote, driverChoice, requestedDriverId: driverId, startDate });
+      setComplete(response.data.message); setStep(3);
+    } catch (err) { setError(err?.response?.data?.message || "Unable to send the booking request."); }
+    finally { setLoading(false); }
+  };
+  const inputClass = "mt-1 h-12 w-full rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-sm outline-none focus:border-[#FFB400] focus:ring-4 focus:ring-[#FFB400]/10";
+  if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, ...routeEstimate(next.pickupCoordinates, next.dropoffCoordinates) }; }); setMapMode(null); }} />;
+  return <main className="min-h-screen bg-[#FFF9EE] px-4 py-5 text-black">
+    <div className="mx-auto max-w-[430px]">
+      <button onClick={() => navigate("/app")} className="mb-5 flex items-center gap-2 text-xs font-bold text-[#9A6A00]"><ArrowLeft size={16}/> Back to dashboard</button>
+      <div className="mb-5"><p className="text-[10px] font-extrabold uppercase tracking-[1.8px] text-[#B77D00]">ASANRIDES BOOKING</p><h1 className="mt-1 text-[29px] font-extrabold tracking-[-0.7px]">Book a ride for your child</h1><p className="mt-2 text-xs leading-5 text-zinc-500">Set up a safe monthly route and we will coordinate the right driver for your family.</p></div>
+      <div className="mb-5 flex items-center gap-2">{["Child & route", "Driver choice", "Request sent"].map((label, index) => <div key={label} className="flex flex-1 items-center gap-2"><div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-extrabold ${step > index ? "bg-[#FFB400]" : "bg-white border border-[#E8D7A5] text-zinc-400"}`}>{step > index ? <CheckCircle2 size={16}/> : index + 1}</div><span className="hidden text-[9px] font-bold text-zinc-500 sm:block">{label}</span></div>)}</div>
+      {step === 1 && <form onSubmit={getQuote} className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="Child details"/><div className="grid grid-cols-2 gap-3"><label className="col-span-2 text-[10px] font-bold text-zinc-500">Child name<input required value={child.name} onChange={update(setChild,"name")} className={inputClass} placeholder="Full name"/></label><label className="text-[10px] font-bold text-zinc-500">Age<input required type="number" min="1" max="17" value={child.age} onChange={update(setChild,"age")} className={inputClass} placeholder="Age"/></label><label className="text-[10px] font-bold text-zinc-500">Grade<input value={child.grade} onChange={update(setChild,"grade")} className={inputClass} placeholder="Class"/></label><label className="col-span-2 text-[10px] font-bold text-zinc-500">School<input required value={child.school} onChange={update(setChild,"school")} className={inputClass} placeholder="School name"/></label></div><SectionTitle icon={MapPin} title="Route"/><label className="text-[10px] font-bold text-zinc-500">Home pickup time<input required type="time" value={route.pickupTime} onChange={update(setRoute,"pickupTime")} className={inputClass}/></label><label className="mt-3 block text-[10px] font-bold text-zinc-500">School pickup time<input required type="time" value={route.schoolPickupTime} onChange={update(setRoute,"schoolPickupTime")} className={inputClass}/></label><LocationButton label="Home or pickup point" value={route.pickup} onClick={() => setMapMode("pickup")} /><LocationButton label="School or destination" value={route.dropoff} onClick={() => setMapMode("dropoff")} /><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-[10px] font-bold text-zinc-500">Estimated distance<input readOnly required value={route.distanceKm ? `${route.distanceKm} km` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label><label className="text-[10px] font-bold text-zinc-500">Estimated time<input readOnly required value={route.durationMinutes ? `${route.durationMinutes} min` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label></div><label className="mt-3 block text-[10px] font-bold text-zinc-500">Vehicle type<select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={inputClass}><option value="AUTO">Auto · ₹14/km</option><option value="VAN">Van · ₹16/km</option></select></label><p className="mt-2 text-[9px] text-zinc-400">Search and pin both locations on the map. Distance and travel time will be filled automatically.</p>{error && <ErrorText text={error}/>}<button disabled={loading || !route.pickupCoordinates || !route.dropoffCoordinates} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-[#FFB400] px-5 font-extrabold disabled:opacity-60"><span>{loading ? "Calculating..." : "Calculate monthly quote"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></form>}
+      {step === 2 && quote && <div className="space-y-4"><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={RouteIcon} title="Your monthly quote"/><div className="rounded-[17px] bg-[#FFF9EE] p-4"><div className="flex justify-between text-xs text-zinc-500"><span>{quote.route.distanceKm} km route</span><span>Valid for 15 minutes</span></div><div className="mt-4 space-y-2 text-xs"><Line label="Distance charge" value={quote.quote.distanceCharge}/><Line label="Additional child charge" value={quote.quote.additionalChildCharge}/><Line label="Ride subtotal" value={quote.quote.rideSubtotal}/><Line label="Platform fee (2%)" value={quote.quote.platformFee}/><Line label="Tax" value={quote.quote.tax}/><Line label="Discount" value={quote.quote.discount}/></div><div className="mt-4 flex justify-between border-t border-[#EBDCA9] pt-4 text-lg font-extrabold"><span>Monthly total</span><span>₹{quote.quote.totalMonthly.toLocaleString("en-IN")}</span></div></div></div><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="Choose your driver path"/><button onClick={() => setDriverChoice("existing")} className={`mb-3 w-full rounded-[17px] border p-4 text-left ${driverChoice === "existing" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I already have a driver</b><p className="mt-1 text-[10px] text-zinc-500">Send this request to a verified ASAN driver.</p></button><button onClick={() => setDriverChoice("new")} className={`w-full rounded-[17px] border p-4 text-left ${driverChoice === "new" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I need a new driver</b><p className="mt-1 text-[10px] text-zinc-500">We will search for an available driver near your route.</p></button>{driverChoice === "existing" && <label className="mt-4 block text-[10px] font-bold text-zinc-500">Driver ASAN ID<input value={driverId} onChange={(e) => setDriverId(e.target.value.toUpperCase())} className={inputClass} placeholder="ASAN-XXXX"/></label>}<label className="mt-4 block text-[10px] font-bold text-zinc-500">Preferred start date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass}/></label>{error && <ErrorText text={error}/>}<button disabled={loading || !driverChoice || (driverChoice === "existing" && driverId.length < 3)} onClick={submitRequest} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-black px-5 font-extrabold text-white disabled:opacity-40"><span>{loading ? "Sending request..." : "Send driver request"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></div></div>}
+      {step === 3 && <div className="rounded-[24px] border border-[#EBDCA9] bg-white p-7 text-center shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><CheckCircle2 size={30}/></div><h2 className="mt-4 text-2xl font-extrabold">Request received</h2><p className="mt-2 text-sm leading-6 text-zinc-500">{complete}. We will update you when the driver responds.</p><button onClick={() => navigate("/app")} className="mt-6 h-12 w-full rounded-[15px] bg-[#FFB400] font-extrabold">Return to dashboard</button></div>}
+    </div>
+  </main>;
+}
+function SectionTitle({ icon: Icon, title }) { return <div className="mb-4 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-[13px] bg-[#FFF1C8] text-[#B77D00]"><Icon size={18}/></div><h2 className="text-lg font-extrabold">{title}</h2></div>; }
+function Line({ label, value }) { return <div className="flex justify-between"><span>{label}</span><span className="font-bold text-black">₹{Number(value).toLocaleString("en-IN")}</span></div>; }
+function ErrorText({ text }) { return <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[10px] text-red-600">{text}</p>; }
+function LocationButton({ label, value, onClick }) { return <button type="button" onClick={onClick} className="mt-3 flex min-h-12 w-full items-center gap-3 rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-left"><MapPin size={17} className="shrink-0 text-[#B77D00]"/><span className="min-w-0 flex-1"><span className="block text-[10px] font-bold text-zinc-500">{label}</span><span className={`mt-0.5 block truncate text-sm ${value ? "text-black" : "text-zinc-400"}`}>{value || "Search and pin a location"}</span></span><Search size={16} className="shrink-0 text-[#B77D00]"/></button>; }
+export default BookRide;
+

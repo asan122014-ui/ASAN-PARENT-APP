@@ -9,6 +9,7 @@ import Login from "../pages/auth/Login";
 import TripDetails from "../pages/main/TripDetails";
 import MainScreen from "../pages/main/MainScreen";
 import InvoiceDetails from "../pages/main/InvoiceDetails";
+import BookRide from "../pages/main/BookRide";
 
 import ProtectedParentRoute from "./ProtectedParentRoute";
 
@@ -44,6 +45,14 @@ function AppRoutes() {
         }
       />
 
+      <Route
+        path="/book-ride"
+        element={
+          <ProtectedParentRoute>
+            <BookRide />
+          </ProtectedParentRoute>
+        }
+      />
       <Route
         path="/tracking"
         element={
@@ -81,3 +90,6 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
+
+
+
