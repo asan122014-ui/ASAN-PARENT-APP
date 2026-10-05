@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, MapPin, Clock3, Route as RouteIcon, UserRound, Search, LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API } from "../../api/api";
@@ -31,6 +31,26 @@ function BookRide() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [complete, setComplete] = useState("");
+  const [bookingId, setBookingId] = useState("");
+  const [bookingStatus, setBookingStatus] = useState(null);
+  const [retryLoading, setRetryLoading] = useState(false);
+
+  useEffect(() => {
+    if (step !== 3 || !bookingId) return undefined;
+    let mounted = true;
+    const refreshStatus = async () => {
+      try {
+        const response = await API.get("/bookings/mine");
+        const current = (response.data?.data || []).find((booking) => String(booking._id) === bookingId);
+        if (mounted && current) setBookingStatus(current);
+      } catch (err) {
+        console.warn("Unable to refresh booking status", err?.message);
+      }
+    };
+    refreshStatus();
+    const timer = window.setInterval(refreshStatus, 5000);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, [step, bookingId]);
 
   const update = (setter, key) => (event) => setter((current) => ({ ...current, [key]: event.target.value }));
   const getQuote = async (event) => {
@@ -44,10 +64,28 @@ function BookRide() {
   const submitRequest = async () => {
     setError(""); setLoading(true);
     try {
-      const response = await API.post("/bookings/request", { child, route: quote.route, quote: quote.quote, driverChoice, requestedDriverId: driverId, startDate });
+      const requestRoute = { ...quote.route, pickupTime: route.pickupTime, schoolPickupTime: route.schoolPickupTime, pickupCoordinates: quote.route.pickupCoordinates || route.pickupCoordinates, dropoffCoordinates: quote.route.dropoffCoordinates || route.dropoffCoordinates };
+      const response = await API.post("/bookings/request", { child, route: requestRoute, quote: quote.quote, driverChoice, requestedDriverId: driverId, startDate });
+      setBookingId(String(response.data?.data?.booking?._id || ""));
+      setBookingStatus(response.data?.data?.booking || null);
       setComplete(response.data.message); setStep(3);
     } catch (err) { setError(err?.response?.data?.message || "Unable to send the booking request."); }
     finally { setLoading(false); }
+  };
+  const retryWithNearbyDrivers = async () => {
+    if (!bookingId) return;
+    setRetryLoading(true);
+    setError("");
+    try {
+      const response = await API.put(`/bookings/mine/${bookingId}/retry-search`);
+      setDriverChoice("new");
+      setBookingStatus(response.data?.data || null);
+      setComplete(response.data?.message || "Nearby driver search started.");
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to start a nearby driver search.");
+    } finally {
+      setRetryLoading(false);
+    }
   };
   const inputClass = "mt-1 h-12 w-full rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-sm outline-none focus:border-[#FFB400] focus:ring-4 focus:ring-[#FFB400]/10";
   if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, ...routeEstimate(next.pickupCoordinates, next.dropoffCoordinates) }; }); setMapMode(null); }} />;
@@ -80,7 +118,7 @@ function BookRide() {
       </div>
       {step === 1 && <form onSubmit={getQuote} className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="Child details"/><div className="grid grid-cols-2 gap-3"><label className="col-span-2 text-[10px] font-bold text-zinc-500">Child name<input required value={child.name} onChange={update(setChild,"name")} className={inputClass} placeholder="Full name"/></label><label className="text-[10px] font-bold text-zinc-500">Age<input required type="number" min="1" max="17" value={child.age} onChange={update(setChild,"age")} className={inputClass} placeholder="Age"/></label><label className="text-[10px] font-bold text-zinc-500">Grade<input value={child.grade} onChange={update(setChild,"grade")} className={inputClass} placeholder="Class"/></label><label className="col-span-2 text-[10px] font-bold text-zinc-500">School<input required value={child.school} onChange={update(setChild,"school")} className={inputClass} placeholder="School name"/></label></div><SectionTitle icon={MapPin} title="Ride information"/><LocationTimeCard label="HOME" locationLabel="Home location" timeLabel="Pickup time" value={route.pickup} time={route.pickupTime} onLocation={() => setMapMode("pickup")} onTime={(event) => setRoute((current) => ({ ...current, pickupTime: event.target.value }))} /><LocationTimeCard label="SCHOOL" locationLabel="School location" timeLabel="Pickup time" value={route.dropoff} time={route.schoolPickupTime} onLocation={() => setMapMode("dropoff")} onTime={(event) => setRoute((current) => ({ ...current, schoolPickupTime: event.target.value }))} /><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-[10px] font-bold text-zinc-500">Estimated distance<input readOnly required value={route.distanceKm ? `${route.distanceKm} km` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label><label className="text-[10px] font-bold text-zinc-500">Estimated time<input readOnly required value={route.durationMinutes ? `${route.durationMinutes} min` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label></div><label className="mt-3 block text-[10px] font-bold text-zinc-500">Vehicle type<select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={inputClass}><option value="AUTO">Auto</option><option value="VAN">Van</option></select></label><p className="mt-2 text-[9px] text-zinc-400">Search and pin both locations on the map. Distance and travel time will be filled automatically.</p>{error && <ErrorText text={error}/>}<button disabled={loading || !route.pickupCoordinates || !route.dropoffCoordinates} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-[#FFB400] px-5 font-extrabold disabled:opacity-60"><span>{loading ? "Calculating..." : "Calculate monthly price"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></form>}
       {step === 2 && quote && <div className="space-y-4"><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={RouteIcon} title="Your monthly price"/><div className="rounded-[17px] bg-[#FFF9EE] p-4"><div className="flex justify-between text-xs text-zinc-500"><span>{quote.route.distanceKm} km route</span><span>Valid for 15 minutes</span></div><div className="mt-4 space-y-2 text-xs"><Line label="Distance charge" value={quote.quote.distanceCharge}/><Line label="Additional child charge" value={quote.quote.additionalChildCharge}/><Line label="Ride subtotal" value={quote.quote.rideSubtotal}/><Line label="Platform fee (2%)" value={quote.quote.platformFee}/><Line label="Tax" value={quote.quote.tax}/><Line label="Discount" value={quote.quote.discount}/></div><div className="mt-4 flex justify-between border-t border-[#EBDCA9] pt-4 text-lg font-extrabold"><span>Monthly total</span><span>₹{quote.quote.totalMonthly.toLocaleString("en-IN")}</span></div></div></div><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="Choose your driver path"/><button onClick={() => setDriverChoice("existing")} className={`mb-3 w-full rounded-[17px] border p-4 text-left ${driverChoice === "existing" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I already have a driver</b><p className="mt-1 text-[10px] text-zinc-500">Send this request to a verified ASAN driver.</p></button><button onClick={() => setDriverChoice("new")} className={`w-full rounded-[17px] border p-4 text-left ${driverChoice === "new" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I need a new driver</b><p className="mt-1 text-[10px] text-zinc-500">We will search for an available driver near your route.</p></button>{driverChoice === "existing" && <label className="mt-4 block text-[10px] font-bold text-zinc-500">Driver ASAN ID<input value={driverId} onChange={(e) => setDriverId(e.target.value.toUpperCase())} className={inputClass} placeholder="ASAN-XXXX"/></label>}<label className="mt-4 block text-[10px] font-bold text-zinc-500">Preferred start date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass}/></label>{error && <ErrorText text={error}/>}<button disabled={loading || !driverChoice || (driverChoice === "existing" && driverId.length < 3)} onClick={submitRequest} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-black px-5 font-extrabold text-white disabled:opacity-40"><span>{loading ? "Sending request..." : "Send driver request"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></div></div>}
-      {step === 3 && <div className="rounded-[24px] border border-[#EBDCA9] bg-white p-7 text-center shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><CheckCircle2 size={30}/></div><h2 className="mt-4 text-2xl font-extrabold">Request received</h2><p className="mt-2 text-sm leading-6 text-zinc-500">{complete}. We will update you when the driver responds.</p><button onClick={() => navigate("/app")} className="mt-6 h-12 w-full rounded-[15px] bg-[#FFB400] font-extrabold">Return to dashboard</button></div>}
+      {step === 3 && <div className="rounded-[24px] border border-[#EBDCA9] bg-white p-7 text-center shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><CheckCircle2 size={30}/></div><h2 className="mt-4 text-2xl font-extrabold">Request received</h2><p className="mt-2 text-sm leading-6 text-zinc-500">{complete}</p><div className="mt-5 rounded-[18px] bg-[#FFF9EE] p-4 text-left"><p className="text-[9px] font-extrabold uppercase tracking-[1.5px] text-[#B77D00]">Live request status</p><p className="mt-2 text-sm font-extrabold">{bookingStatus?.status === "awaiting_payment" ? "Driver accepted · payment required" : bookingStatus?.driverRequestId?.matchingStatus === "Exhausted" ? driverChoice === "existing" ? "The selected driver could not accept" : "No nearby driver is available right now" : driverChoice === "new" ? "Searching nearby drivers" : "Waiting for your driver to respond"}</p><p className="mt-1 text-[10px] leading-5 text-zinc-500">{bookingStatus?.status === "awaiting_payment" ? `Monthly price: ₹${Number(bookingStatus?.quote?.totalMonthly || quote?.quote?.totalMonthly || 0).toLocaleString("en-IN")}.` : "This status refreshes automatically while the request is open."}</p></div>{bookingStatus?.driverRequestId?.matchingStatus === "Exhausted" && driverChoice === "existing" && <button disabled={retryLoading} onClick={retryWithNearbyDrivers} className="mt-4 h-12 w-full rounded-[15px] bg-black font-extrabold text-white disabled:opacity-60">{retryLoading ? "Starting search..." : "Search for a nearby driver"}</button>}{error && <ErrorText text={error}/>}<button onClick={() => navigate("/app")} className="mt-6 h-12 w-full rounded-[15px] bg-[#FFB400] font-extrabold">Return to dashboard</button></div>}
     </div>
   </main>;
 }
