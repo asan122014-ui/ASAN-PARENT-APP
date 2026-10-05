@@ -4,7 +4,7 @@ import { API } from "../../api/api";
 import { AlertCircle, CheckCircle2, Clock3, RefreshCw, Route, X } from "lucide-react";
 
 const openBookingStatuses = new Set(["quoted", "awaiting_driver", "driver_searching", "driver_accepted", "awaiting_payment", "active"]);
-const canCancelStatuses = new Set(["awaiting_driver", "driver_searching"]);
+const canCancelStatuses = new Set(["awaiting_driver", "driver_searching", "awaiting_payment"]);
 
 function getStatus(booking) {
   const status = booking.status;
@@ -117,14 +117,14 @@ function CurrentBookings() {
                   {cancellable && (cancelId === booking._id ? (
                     <div className="mt-3 rounded-[13px] border border-[#F0D9D5] bg-[#FFF7F5] p-3">
                       <p className="text-[10px] font-bold text-[#7C342D]">Cancel this ride request?</p>
-                      <p className="mt-1 text-[9px] leading-4 text-[#8C625B]">The driver offer will be withdrawn. You can submit a new request later.</p>
+                      <p className="mt-1 text-[9px] leading-4 text-[#8C625B]">{booking.status === "awaiting_payment" ? "The booking and payment access will be cancelled. Any payment completed at the same time will be refunded." : "The driver offer will be withdrawn. You can submit a new request later."}</p>
                       <div className="mt-2 flex gap-2">
                         <button type="button" onClick={() => setCancelId("")} disabled={busyId === booking._id} className="h-9 flex-1 rounded-[11px] border border-[#E7D9D6] bg-white text-[9px] font-bold text-[#6D6255]">Keep request</button>
                         <button type="button" onClick={() => cancelBooking(booking._id)} disabled={busyId === booking._id} className="h-9 flex-1 rounded-[11px] bg-[#B83E32] text-[9px] font-extrabold text-white disabled:opacity-50">{busyId === booking._id ? "Cancelling…" : "Confirm cancellation"}</button>
                       </div>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => { setNotice(""); setCancelId(booking._id); }} className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-[11px] border border-[#E7D9D6] bg-white px-3 text-[9px] font-bold text-[#8D4B43]"><X size={13} /> Cancel request</button>
+                    <button type="button" onClick={() => { setNotice(""); setCancelId(booking._id); }} className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-[11px] border border-[#E7D9D6] bg-white px-3 text-[9px] font-bold text-[#8D4B43]"><X size={13} /> {booking.status === "awaiting_payment" ? "Cancel booking" : "Cancel request"}</button>
                   ))}
                 </div>
               </article>
