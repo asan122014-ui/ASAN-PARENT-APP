@@ -123,6 +123,7 @@ function BookRide() {
           {driverAccepted && <p className="mt-4 border-t border-[#EBDCA9] pt-3 text-[11px] font-bold">Monthly price: ₹{Number(bookingStatus?.quote?.totalMonthly || quote?.quote?.totalMonthly || 0).toLocaleString("en-IN")}</p>}
         </div>
         {error && <ErrorText text={error}/>}
+        {driverAccepted && <button onClick={() => navigate(`/booking-payment/${bookingId}`)} className="mt-5 h-12 w-full rounded-[15px] bg-[#FFB400] font-extrabold">{bookingStatus?.status === "active" ? "View payment receipt" : "Pay monthly price"}</button>}
         <button onClick={() => navigate("/app")} className="mt-6 h-12 w-full rounded-[15px] bg-[#FFB400] font-extrabold">Return to dashboard</button>
       </div>}
     </div>

@@ -15,6 +15,7 @@ import { API } from "../../api/api";
 
 
 import BottomNav from "../../components/layout/BottomNav";
+import CurrentBookings from "./CurrentBookings";
 
 
 
@@ -3886,6 +3887,8 @@ function Home({
             </div>
 
           </motion.button>
+
+          <CurrentBookings />
 
         </main>
 

@@ -10,6 +10,7 @@ import TripDetails from "../pages/main/TripDetails";
 import MainScreen from "../pages/main/MainScreen";
 import InvoiceDetails from "../pages/main/InvoiceDetails";
 import BookRide from "../pages/main/BookRide";
+import BookingPayment from "../pages/main/BookingPayment";
 
 import ProtectedParentRoute from "./ProtectedParentRoute";
 
@@ -20,6 +21,7 @@ import ProtectedParentRoute from "./ProtectedParentRoute";
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/booking-payment/:id" element={<ProtectedParentRoute><BookingPayment /></ProtectedParentRoute>} />
 
       {/* =====================================================
           PUBLIC
