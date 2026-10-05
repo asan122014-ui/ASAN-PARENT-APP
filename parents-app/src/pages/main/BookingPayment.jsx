@@ -4,14 +4,14 @@ import { ArrowLeft, CheckCircle2, CreditCard, LoaderCircle, RefreshCw, ShieldChe
 import { API } from "../../api/api";
 
 let sdkPromise;
-function loadCashfree() {
-  if (window.Cashfree) return Promise.resolve(window.Cashfree);
+function loadRazorpay() {
+  if (window.Razorpay) return Promise.resolve(window.Razorpay);
   if (!sdkPromise) sdkPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     const timer = setTimeout(() => { script.remove(); reject(new Error("Payment checkout took too long to load. Please retry.")); }, 20000);
-    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => { clearTimeout(timer); window.Cashfree ? resolve(window.Cashfree) : reject(new Error("Unable to open payment checkout.")); };
+    script.onload = () => { clearTimeout(timer); window.Razorpay ? resolve(window.Razorpay) : reject(new Error("Unable to open payment checkout.")); };
     script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error("Unable to load payment checkout. Check your connection.")); };
     document.head.appendChild(script);
   }).catch((error) => { sdkPromise = null; throw error; });
@@ -27,7 +27,7 @@ export default function BookingPayment() {
   const refresh = useCallback(async (verify = false) => {
     setChecking(true);
     try {
-      if (verify) await API.post(`/booking-payments/${id}/verify`);
+      if (verify) await API.get(`/booking-payments/${id}/status`);
       const response = await API.get(`/booking-payments/${id}`);
       setDetails(response.data.data);
       setError("");
@@ -45,17 +45,43 @@ export default function BookingPayment() {
     return () => clearInterval(timer);
   }, [hasOrder, paid, refresh]);
   const pay = async () => {
+    let opened = false;
     setBusy(true); setError("");
     try {
-      const Cashfree = await loadCashfree();
+      const Razorpay = await loadRazorpay();
       const response = await API.post(`/booking-payments/${id}/order`);
       const order = response.data.data;
       if (order.paid) { await refresh(); return; }
-      const result = await Cashfree({ mode: order.mode }).checkout({ paymentSessionId: order.paymentSessionId, redirectTarget: "_self" });
-      if (result?.error) throw new Error(result.error.message || "Payment was not completed. Please check status or retry.");
-      await refresh(true);
+      let completed = false;
+      let failed = false;
+      const checkout = new Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "ASAN Rides",
+        description: "Monthly child ride service",
+        order_id: order.order_id,
+        handler: async (result) => {
+          completed = true;
+          setBusy(true);
+          try {
+            await API.post(`/booking-payments/${id}/verify`, result);
+            await refresh();
+          } catch (err) {
+            setError(err.response?.data?.message || "Payment could not be confirmed yet. Check payment status before retrying.");
+          } finally { setBusy(false); }
+        },
+        modal: { ondismiss: () => { setBusy(false); if (!completed && !failed) setError("Payment window closed. No new payment was confirmed."); } },
+      });
+      checkout.on("payment.failed", (event) => {
+        failed = true;
+        setBusy(false);
+        setError(event.error?.description || "Payment failed. Please try again.");
+      });
+      checkout.open();
+      opened = true;
     } catch (err) { setError(err.response?.data?.message || err.message || "Unable to start payment."); }
-    finally { setBusy(false); }
+    finally { if (!opened) setBusy(false); }
   };
   const booking = details?.booking;
   const payment = details?.payment;
@@ -67,7 +93,6 @@ export default function BookingPayment() {
       <h1 className="mt-3 text-[26px] font-extrabold">{paid ? "Payment received" : "Complete your booking"}</h1>
       <p className="mt-2 text-xs leading-5 text-zinc-500">{paid ? "Your payment is confirmed. Your service dates are below." : "Pay securely to begin your child’s monthly ride service."}</p>
     </header>
-    {details?.mode === "sandbox" && <p className="mt-4 rounded-[13px] border border-[#EBDCA9] bg-[#FFF1C8] p-3 text-xs font-semibold text-[#8A6100]">Sandbox payment — use Cashfree test payment details.</p>}
     {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-xs text-red-700">{error}</p>}
     {!details ? <button onClick={() => refresh()} className="mt-5 flex items-center gap-2 text-sm">{checking && <LoaderCircle size={16} className="animate-spin"/>}{checking ? "Loading booking…" : "Retry loading booking"}</button> : <section className="mt-5 rounded-[24px] border border-[#EBDCA9] bg-white p-6 shadow-[0_12px_35px_rgba(101,76,17,0.07)]">
       <div className="mb-4 flex items-center gap-3"><span className="rounded-[14px] bg-[#FFF1C8] p-3 text-[#B77D00]">{paid ? <CheckCircle2/> : <CreditCard/>}</span><div><h2 className="font-extrabold">{booking.child?.name}</h2><p className="text-xs text-zinc-500">{booking.child?.school}</p></div></div>
@@ -77,7 +102,7 @@ export default function BookingPayment() {
         {booking.status === "awaiting_payment" && <button onClick={pay} disabled={busy || checking || payment?.status === "PENDING"} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[15px] bg-[#FFB400] font-extrabold disabled:opacity-50">{busy && <LoaderCircle size={17} className="animate-spin"/>}{busy ? "Opening checkout…" : "Pay securely"}</button>}
         {hasOrder && <button onClick={() => refresh(true)} disabled={checking || busy} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[15px] border border-[#EBDCA9] text-xs font-bold disabled:opacity-50"><RefreshCw size={14} className={checking ? "animate-spin" : ""}/>Check payment status</button>}
       </>}
-      <p className="mt-4 flex items-center gap-2 text-[10px] text-zinc-500"><ShieldCheck size={14}/> Payments processed securely by Cashfree</p>
+      <p className="mt-4 flex items-center gap-2 text-[10px] text-zinc-500"><ShieldCheck size={14}/> Payments processed securely by Razorpay</p>
     </section>}
   </div></main>;
 }
