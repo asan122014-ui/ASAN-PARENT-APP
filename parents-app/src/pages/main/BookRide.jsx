@@ -32,6 +32,7 @@ function BookRide() {
   const [error, setError] = useState("");
   const [bookingId, setBookingId] = useState("");
   const [bookingStatus, setBookingStatus] = useState(null);
+  const [requestDelivery, setRequestDelivery] = useState(null);
 
   useEffect(() => {
     if (step !== 3 || !bookingId) return undefined;
@@ -64,13 +65,20 @@ function BookRide() {
     try {
       const requestRoute = { ...quote.route, pickupTime: route.pickupTime, schoolPickupTime: route.schoolPickupTime, pickupCoordinates: quote.route.pickupCoordinates || route.pickupCoordinates, dropoffCoordinates: quote.route.dropoffCoordinates || route.dropoffCoordinates };
       const response = await API.post("/bookings/request", { child, route: requestRoute, quote: quote.quote, driverChoice, requestedDriverId: driverId, startDate });
-      setBookingId(String(response.data?.data?.booking?._id || ""));
-      setBookingStatus(response.data?.data?.booking || null);
+      const result = response.data?.data || {};
+      setBookingId(String(result.booking?._id || ""));
+      setBookingStatus(result.booking || null);
+      setRequestDelivery({
+        targetDriverId: result.targetDriverId || (driverChoice === "existing" ? driverId.trim().toUpperCase() : null),
+        offerSent: result.offerSent,
+        message: response.data?.message || "",
+      });
       setStep(3);
     } catch (err) { setError(err?.response?.data?.message || "Unable to send the booking request."); }
     finally { setLoading(false); }
   };
   const driverAccepted = bookingStatus?.status === "awaiting_payment" || bookingStatus?.driverRequestId?.matchingStatus === "Accepted";
+  const directDeliveryFailed = driverChoice === "existing" && requestDelivery?.offerSent === false && !driverAccepted;
   const inputClass = "mt-1 h-12 w-full rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-sm outline-none focus:border-[#FFB400] focus:ring-4 focus:ring-[#FFB400]/10";
   if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, ...routeEstimate(next.pickupCoordinates, next.dropoffCoordinates) }; }); setMapMode(null); }} />;
   return <main className="min-h-screen bg-[#FFF9EE] px-4 py-5 text-black">
@@ -104,13 +112,13 @@ function BookRide() {
       {step === 2 && quote && <div className="space-y-4"><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={RouteIcon} title="Your monthly price"/><div className="rounded-[17px] bg-[#FFF9EE] p-4"><div className="flex justify-between text-xs text-zinc-500"><span>{quote.route.distanceKm} km route</span><span>Valid for 15 minutes</span></div><div className="mt-4 space-y-2 text-xs"><Line label="Distance charge" value={quote.quote.distanceCharge}/><Line label="Additional child charge" value={quote.quote.additionalChildCharge}/><Line label="Ride subtotal" value={quote.quote.rideSubtotal}/><Line label="Platform fee (2%)" value={quote.quote.platformFee}/><Line label="Tax" value={quote.quote.tax}/><Line label="Discount" value={quote.quote.discount}/></div><div className="mt-4 flex justify-between border-t border-[#EBDCA9] pt-4 text-lg font-extrabold"><span>Monthly total</span><span>₹{quote.quote.totalMonthly.toLocaleString("en-IN")}</span></div></div></div><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="Choose your driver path"/><button onClick={() => setDriverChoice("existing")} className={`mb-3 w-full rounded-[17px] border p-4 text-left ${driverChoice === "existing" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I already have a driver</b><p className="mt-1 text-[10px] text-zinc-500">Send this request to a verified ASAN driver.</p></button><button onClick={() => setDriverChoice("new")} className={`w-full rounded-[17px] border p-4 text-left ${driverChoice === "new" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I need a new driver</b><p className="mt-1 text-[10px] text-zinc-500">We will search for an available driver near your route.</p></button>{driverChoice === "existing" && <label className="mt-4 block text-[10px] font-bold text-zinc-500">Driver ASAN ID<input value={driverId} onChange={(e) => setDriverId(e.target.value.toUpperCase())} className={inputClass} placeholder="ASAN-XXXX"/></label>}<label className="mt-4 block text-[10px] font-bold text-zinc-500">Preferred start date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass}/></label>{error && <ErrorText text={error}/>}<button disabled={loading || !driverChoice || (driverChoice === "existing" && driverId.length < 3)} onClick={submitRequest} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-black px-5 font-extrabold text-white disabled:opacity-40"><span>{loading ? "Sending request..." : "Send driver request"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></div></div>}
       {step === 3 && <div className="rounded-[24px] border border-[#EBDCA9] bg-white p-7 text-center shadow-[0_12px_35px_rgba(101,76,17,0.07)]">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><CheckCircle2 size={30}/></div>
-        <h2 className="mt-4 text-2xl font-extrabold">Request sent</h2>
-        <p className="mt-2 text-sm leading-6 text-zinc-500">{driverAccepted ? "Your driver has accepted the request." : "Your request has been sent. We’re waiting for the driver to accept."}</p>
+        <h2 className="mt-4 text-2xl font-extrabold">{directDeliveryFailed ? "Request needs attention" : "Request sent"}</h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">{driverAccepted ? "Your driver has accepted the request." : directDeliveryFailed ? requestDelivery.message || `We could not deliver this request to ASAN ID ${requestDelivery.targetDriverId}. Please contact the institute.` : driverChoice === "existing" ? `Your request was sent to ASAN ID ${requestDelivery?.targetDriverId || driverId.trim().toUpperCase()}. We’re waiting for the driver to accept.` : "Your request has been sent. We’re waiting for a nearby driver to accept."}</p>
         <div className="mt-5 rounded-[18px] bg-[#FFF9EE] p-4 text-left">
           <p className="text-[9px] font-extrabold uppercase tracking-[1.5px] text-[#B77D00]">Request progress</p>
           <div className="mt-3 flex items-start gap-3">
             <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${driverAccepted ? "bg-[#E8F4EC] text-[#27804B]" : "bg-[#FFF1C8] text-[#B77D00]"}`}>{driverAccepted ? <CheckCircle2 size={15}/> : <Clock3 size={15}/>}</span>
-            <div><p className="text-[11px] font-extrabold">{driverAccepted ? "Driver accepted" : "Waiting for driver acceptance"}</p><p className="mt-1 text-[10px] leading-4 text-zinc-500">{driverAccepted ? "Your booking is ready for the next step." : "We’ll update you when the driver responds."}</p></div>
+            <div><p className="text-[11px] font-extrabold">{driverAccepted ? "Driver accepted" : directDeliveryFailed ? "Offer not delivered" : "Waiting for driver acceptance"}</p><p className="mt-1 text-[10px] leading-4 text-zinc-500">{driverAccepted ? "Your booking is ready for the next step." : directDeliveryFailed ? `Target: ASAN ID ${requestDelivery.targetDriverId}` : driverChoice === "existing" ? `Offer sent to ASAN ID ${requestDelivery?.targetDriverId || driverId.trim().toUpperCase()}` : "We’ll update you when a nearby driver responds."}</p></div>
           </div>
           {driverAccepted && <p className="mt-4 border-t border-[#EBDCA9] pt-3 text-[11px] font-bold">Monthly price: ₹{Number(bookingStatus?.quote?.totalMonthly || quote?.quote?.totalMonthly || 0).toLocaleString("en-IN")}</p>}
         </div>
