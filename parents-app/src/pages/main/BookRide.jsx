@@ -30,10 +30,8 @@ function BookRide() {
   const [startDate, setStartDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [complete, setComplete] = useState("");
   const [bookingId, setBookingId] = useState("");
   const [bookingStatus, setBookingStatus] = useState(null);
-  const [retryLoading, setRetryLoading] = useState(false);
 
   useEffect(() => {
     if (step !== 3 || !bookingId) return undefined;
@@ -68,27 +66,11 @@ function BookRide() {
       const response = await API.post("/bookings/request", { child, route: requestRoute, quote: quote.quote, driverChoice, requestedDriverId: driverId, startDate });
       setBookingId(String(response.data?.data?.booking?._id || ""));
       setBookingStatus(response.data?.data?.booking || null);
-      setComplete(response.data.message); setStep(3);
+      setStep(3);
     } catch (err) { setError(err?.response?.data?.message || "Unable to send the booking request."); }
     finally { setLoading(false); }
   };
-  const retryWithNearbyDrivers = async () => {
-    if (!bookingId) return;
-    setRetryLoading(true);
-    setError("");
-    try {
-      const response = await API.put(`/bookings/mine/${bookingId}/retry-search`);
-      setDriverChoice("new");
-      setBookingStatus(response.data?.data || null);
-      setComplete(response.data?.message || "Nearby driver search started.");
-    } catch (err) {
-      setError(err?.response?.data?.message || "Unable to start a nearby driver search.");
-    } finally {
-      setRetryLoading(false);
-    }
-  };
   const driverAccepted = bookingStatus?.status === "awaiting_payment" || bookingStatus?.driverRequestId?.matchingStatus === "Accepted";
-  const driverRequestExhausted = bookingStatus?.driverRequestId?.matchingStatus === "Exhausted";
   const inputClass = "mt-1 h-12 w-full rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-sm outline-none focus:border-[#FFB400] focus:ring-4 focus:ring-[#FFB400]/10";
   if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, ...routeEstimate(next.pickupCoordinates, next.dropoffCoordinates) }; }); setMapMode(null); }} />;
   return <main className="min-h-screen bg-[#FFF9EE] px-4 py-5 text-black">
@@ -123,21 +105,15 @@ function BookRide() {
       {step === 3 && <div className="rounded-[24px] border border-[#EBDCA9] bg-white p-7 text-center shadow-[0_12px_35px_rgba(101,76,17,0.07)]">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><CheckCircle2 size={30}/></div>
         <h2 className="mt-4 text-2xl font-extrabold">Request sent</h2>
-        <p className="mt-2 text-sm leading-6 text-zinc-500">{driverAccepted ? "Your driver has accepted. Your request is now waiting for institute approval." : "Your request has been sent. We’re waiting for driver acceptance; institute approval follows once a driver accepts."}</p>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">{driverAccepted ? "Your driver has accepted the request." : "Your request has been sent. We’re waiting for the driver to accept."}</p>
         <div className="mt-5 rounded-[18px] bg-[#FFF9EE] p-4 text-left">
           <p className="text-[9px] font-extrabold uppercase tracking-[1.5px] text-[#B77D00]">Request progress</p>
           <div className="mt-3 flex items-start gap-3">
             <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${driverAccepted ? "bg-[#E8F4EC] text-[#27804B]" : "bg-[#FFF1C8] text-[#B77D00]"}`}>{driverAccepted ? <CheckCircle2 size={15}/> : <Clock3 size={15}/>}</span>
-            <div><p className="text-[11px] font-extrabold">{driverAccepted ? "Driver accepted" : driverRequestExhausted ? "Waiting for driver acceptance" : "Waiting for driver acceptance"}</p><p className="mt-1 text-[10px] leading-4 text-zinc-500">{driverRequestExhausted ? "There’s no response yet. You can also ask us to search nearby drivers." : "We’ll update you when the driver responds."}</p></div>
-          </div>
-          <div className="ml-3.5 mt-1 h-4 border-l border-dashed border-[#E8D7A5]" />
-          <div className="flex items-start gap-3">
-            <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${driverAccepted ? "bg-[#FFF1C8] text-[#B77D00]" : "bg-[#F3F0E9] text-zinc-400"}`}>{driverAccepted ? <Clock3 size={15}/> : <span className="text-[10px] font-black">2</span>}</span>
-            <div><p className="text-[11px] font-extrabold">{driverAccepted ? "Waiting for institute approval" : "Institute approval"}</p><p className="mt-1 text-[10px] leading-4 text-zinc-500">{driverAccepted ? "The institute will review the accepted request." : "The institute reviews it after a driver accepts."}</p></div>
+            <div><p className="text-[11px] font-extrabold">{driverAccepted ? "Driver accepted" : "Waiting for driver acceptance"}</p><p className="mt-1 text-[10px] leading-4 text-zinc-500">{driverAccepted ? "Your booking is ready for the next step." : "We’ll update you when the driver responds."}</p></div>
           </div>
           {driverAccepted && <p className="mt-4 border-t border-[#EBDCA9] pt-3 text-[11px] font-bold">Monthly price: ₹{Number(bookingStatus?.quote?.totalMonthly || quote?.quote?.totalMonthly || 0).toLocaleString("en-IN")}</p>}
         </div>
-        {driverRequestExhausted && driverChoice === "existing" && <button disabled={retryLoading} onClick={retryWithNearbyDrivers} className="mt-4 h-12 w-full rounded-[15px] bg-black font-extrabold text-white disabled:opacity-60">{retryLoading ? "Starting search..." : "Search for a nearby driver"}</button>}
         {error && <ErrorText text={error}/>}
         <button onClick={() => navigate("/app")} className="mt-6 h-12 w-full rounded-[15px] bg-[#FFB400] font-extrabold">Return to dashboard</button>
       </div>}
