@@ -2252,7 +2252,22 @@ function Home({
                 time.
 
               </p>
-              <button type="button" onClick={() => { window.location.href = "/book-ride"; }} className="mt-4 flex h-12 w-full items-center justify-between rounded-[16px] bg-[#FFB400] px-4 text-left text-black shadow-[0_8px_20px_rgba(255,180,0,0.22)]"><span><span className="block text-[12px] font-extrabold">Book a ride for your child</span><span className="mt-1 block text-[9px] text-black/60">Get a distance-based monthly quote</span></span><ArrowRight size={17} /></button>
+              <div className="mt-5 flex w-full justify-center">
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = "/book-ride"; }}
+                  className="group relative flex min-h-[58px] w-full max-w-[360px] items-center justify-between overflow-hidden rounded-[19px] border border-[#E4A800] bg-gradient-to-r from-[#FFC928] via-[#FFB900] to-[#F4A900] px-5 text-left text-black shadow-[0_10px_24px_rgba(197,139,0,0.22)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(197,139,0,0.28)] active:translate-y-0"
+                >
+                  <span className="pointer-events-none absolute -right-7 -top-12 h-28 w-28 rounded-full border border-white/30 bg-white/15 transition-transform duration-300 group-hover:scale-110" />
+                  <span className="relative">
+                    <span className="block text-[13px] font-extrabold tracking-[-0.15px]">Book a ride for your child</span>
+                    <span className="mt-1 block text-[9px] font-medium text-black/60">Get a distance-based monthly price</span>
+                  </span>
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-[#FFC928] transition-transform duration-200 group-hover:translate-x-0.5">
+                    <ArrowRight size={17} strokeWidth={2.2} />
+                  </span>
+                </button>
+              </div>
 
             </motion.div>
 
