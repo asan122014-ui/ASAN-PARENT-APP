@@ -12,22 +12,12 @@ import {
   setAccessToken,
 } from "../../api/api";
 
-import {
-  linkDriver,
-} from "../../api/parentApi";
-
 import MapPicker from "../../components/MapPicker";
 
 import ParentLoginStep from "./onboarding/ParentLoginStep";
 import EmailVerificationStep from "./onboarding/EmailVerificationStep";
 import ParentRegistrationStep from "./onboarding/ParentRegistrationStep";
 
-import ChildDetailsStep, {
-  createEmptyChild,
-} from "./onboarding/ChildDetailsStep";
-
-import DriverChoiceStep from "./onboarding/DriverChoiceStep";
-import DriverIdStep from "./onboarding/DriverIdStep";
 
 /* =========================================================
    LOGIN / REGISTRATION / ONBOARDING CONTROLLER
@@ -71,12 +61,6 @@ function Login() {
       ↓
     verify-register
       ↓
-    child-details
-      ↓
-    driver-choice
-      ↓
-    driver-id / request-driver
-      ↓
     dashboard
   */
 
@@ -108,40 +92,12 @@ function Login() {
     });
 
   /* =======================================================
-     CHILDREN
-  ======================================================= */
-
-  const [
-    children,
-    setChildren,
-  ] =
-    useState([
-      createEmptyChild(),
-    ]);
-
-  /* =======================================================
-     DRIVER
-  ======================================================= */
-
-  const [
-    driverId,
-    setDriverId,
-  ] =
-    useState("");
-
-  /* =======================================================
      MAP
   ======================================================= */
 
   const [
     mapMode,
     setMapMode,
-  ] =
-    useState(null);
-
-  const [
-    mapChildIndex,
-    setMapChildIndex,
   ] =
     useState(null);
 
@@ -745,8 +701,14 @@ function Login() {
           parent
         );
 
-        setStep(
-          "child-details"
+        localStorage.setItem("activeTab", "home");
+        localStorage.setItem("previousTab", "home");
+
+        navigate(
+          "/app",
+          {
+            replace: true,
+          }
         );
       } catch (
         err
@@ -847,464 +809,20 @@ function Login() {
       }
     };
 
-  /* =======================================================
-     SAVE CHILDREN
-  ======================================================= */
-
-  const handleSaveChildren =
-    async () => {
-      try {
-        setError("");
-        setLoading(
-          true
-        );
-
-        if (
-          !children.length
-        ) {
-          throw new Error(
-            "Add at least one child."
-          );
-        }
-
-        for (
-          const child of
-          children
-        ) {
-          if (
-            !child.name
-              ?.trim()
-          ) {
-            throw new Error(
-              "Child name is required."
-            );
-          }
-
-          if (
-            !child.age ||
-            Number(
-              child.age
-            ) <= 0
-          ) {
-            throw new Error(
-              "Enter a valid child age."
-            );
-          }
-
-          if (
-            !child.school
-              ?.trim()
-          ) {
-            throw new Error(
-              "School name is required."
-            );
-          }
-
-          if (
-            !child.grade
-              ?.trim()
-          ) {
-            throw new Error(
-              "Grade is required."
-            );
-          }
-
-          await API.post(
-            "/children/add",
-            {
-              name:
-                child.name
-                  .trim(),
-
-              age:
-                Number(
-                  child.age
-                ),
-
-              gender:
-                child.gender ||
-                "",
-
-              school:
-                child.school
-                  .trim(),
-
-              grade:
-                child.grade
-                  .trim(),
-
-              section:
-                child.section
-                  ?.trim() ||
-                "",
-
-              pickupTime:
-                child.pickupTime,
-
-              eveningPickup:
-                child.eveningPickup,
-
-              pickupLocation:
-                child.pickupLocation
-                  ?.trim() ||
-                "",
-
-              dropoffLocation:
-                child.dropoffLocation
-                  ?.trim() ||
-                "",
-
-              location: {
-                lat:
-                  child.location
-                    ?.lat,
-
-                lng:
-                  child.location
-                    ?.lng,
-              },
-
-              dropLocationCoords: {
-                lat:
-                  child
-                    .dropLocationCoords
-                    ?.lat,
-
-                lng:
-                  child
-                    .dropLocationCoords
-                    ?.lng,
-              },
-
-              medicalNotes:
-                child.medicalNotes
-                  ?.trim() ||
-                "",
-
-              emergencyContact:
-                child.emergencyContact
-                  ?.trim() ||
-                "",
-            }
-          );
-        }
-
-        setStep(
-          "driver-choice"
-        );
-      } catch (
-        err
-      ) {
-        console.error(
-          "SAVE CHILDREN ERROR:",
-          err
-        );
-
-        setError(
-          getErrorMessage(
-            err,
-            "Unable to save child details."
-          )
-        );
-      } finally {
-        setLoading(
-          false
-        );
-      }
-    };
-
-  /* =======================================================
-     REQUEST DRIVER
-  ======================================================= */
-
-  const handleRequestDriver =
-    async () => {
-      try {
-        setError("");
-        setLoading(
-          true
-        );
-
-        await API.post(
-          "/driver-request",
-          {}
-        );
-
-        navigate(
-          "/app",
-          {
-            replace:
-              true,
-          }
-        );
-      } catch (
-        err
-      ) {
-        console.error(
-          "REQUEST DRIVER ERROR:",
-          err
-        );
-
-        setError(
-          getErrorMessage(
-            err,
-            "Unable to request a Driver."
-          )
-        );
-      } finally {
-        setLoading(
-          false
-        );
-      }
-    };
-
-  /* =======================================================
-     LINK DRIVER
-  ======================================================= */
-
-  const handleDriverLink =
-    async () => {
-      const normalizedDriverId =
-        String(
-          driverId ||
-          ""
-        )
-          .trim()
-          .toUpperCase();
-
-      if (
-        !normalizedDriverId
-      ) {
-        setError(
-          "Enter your Driver ID."
-        );
-
-        return;
-      }
-
-      try {
-        setError("");
-        setLoading(
-          true
-        );
-
-        const result =
-          await linkDriver(
-            normalizedDriverId
-          );
-
-        const updatedParent =
-          result?.data;
-
-        if (
-          updatedParent
-        ) {
-          saveParent(
-            updatedParent
-          );
-        }
-
-        localStorage.setItem(
-          "driverId",
-          normalizedDriverId
-        );
-
-        navigate(
-          "/app",
-          {
-            replace:
-              true,
-          }
-        );
-      } catch (
-        err
-      ) {
-        console.error(
-          "LINK DRIVER ERROR:",
-          err
-        );
-
-        setError(
-          getErrorMessage(
-            err,
-            "Unable to link this Driver."
-          )
-        );
-      } finally {
-        setLoading(
-          false
-        );
-      }
-    };
-
-  /* =======================================================
-     MAP OPENERS
-  ======================================================= */
-
-  const openParentMap =
-    () => {
-      setMapChildIndex(
-        null
-      );
-
-      setMapMode(
-        "parent"
-      );
-    };
-
-  const openPickupMap =
-    (
-      childIndex
-    ) => {
-      setMapChildIndex(
-        childIndex
-      );
-
-      setMapMode(
-        "pickup"
-      );
-    };
-
-  const openDropMap =
-    (
-      childIndex
-    ) => {
-      setMapChildIndex(
-        childIndex
-      );
-
-      setMapMode(
-        "drop"
-      );
-    };
-
-  const closeMap =
-    () => {
-      setMapMode(
-        null
-      );
-
-      setMapChildIndex(
-        null
-      );
-    };
-
-  /* =======================================================
-     MAP LOCATION SELECTED
-  ======================================================= */
-
-  const handleMapChange =
-    (
-      location
-    ) => {
-      if (
-        !location
-      ) {
-        return;
-      }
-
-      if (
-        mapMode ===
-        "parent"
-      ) {
-        setForm(
-          (
-            previous
-          ) => ({
-            ...previous,
-
-            address:
-              location.address ||
-              "",
-
-            latitude:
-              location.latitude,
-
-            longitude:
-              location.longitude,
-          })
-        );
-
-        closeMap();
-
-        return;
-      }
-
-      if (
-        mapChildIndex ===
-          null ||
-        mapChildIndex ===
-          undefined
-      ) {
-        return;
-      }
-
-      setChildren(
-        (
-          previous
-        ) =>
-          previous.map(
-            (
-              child,
-              index
-            ) => {
-              if (
-                index !==
-                mapChildIndex
-              ) {
-                return child;
-              }
-
-              if (
-                mapMode ===
-                "pickup"
-              ) {
-                return {
-                  ...child,
-
-                  pickupLocation:
-                    location.address ||
-                    "",
-
-                  location: {
-                    lat:
-                      location.latitude,
-
-                    lng:
-                      location.longitude,
-                  },
-                };
-              }
-
-              if (
-                mapMode ===
-                "drop"
-              ) {
-                return {
-                  ...child,
-
-                  dropoffLocation:
-                    location.address ||
-                    "",
-
-                  dropLocationCoords: {
-                    lat:
-                      location.latitude,
-
-                    lng:
-                      location.longitude,
-                  },
-                };
-              }
-
-              return child;
-            }
-          )
-      );
-
-      closeMap();
-    };
-
+  const openParentMap = () => setMapMode("parent");
+
+  const closeMap = () => setMapMode(null);
+
+  const handleMapChange = (location) => {
+    if (!location) return;
+    setForm((previous) => ({
+      ...previous,
+      address: location.address || "",
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }));
+    closeMap();
+  };
   /* =======================================================
      NAVIGATION HELPERS
   ======================================================= */
@@ -1462,128 +980,13 @@ function Login() {
       )}
 
       {/* ===================================================
-          CHILD DETAILS
-      =================================================== */}
-
-      {step ===
-        "child-details" && (
-        <ChildDetailsStep
-          children={
-            children
-          }
-          setChildren={
-            setChildren
-          }
-          onContinue={
-            handleSaveChildren
-          }
-          onBack={() => {
-            setError("");
-          }}
-          onOpenPickupMap={
-            openPickupMap
-          }
-          onOpenDropMap={
-            openDropMap
-          }
-          loading={
-            loading
-          }
-          error={
-            error
-          }
-        />
-      )}
-
-      {/* ===================================================
-          DRIVER CHOICE
-      =================================================== */}
-
-      {step ===
-        "driver-choice" && (
-        <DriverChoiceStep
-          onEnterDriverId={() => {
-            setError("");
-
-            setStep(
-              "driver-id"
-            );
-          }}
-          onRequestDriver={
-            handleRequestDriver
-          }
-          onBack={() => {
-            setError("");
-
-            setStep(
-              "child-details"
-            );
-          }}
-          loading={
-            loading
-          }
-          error={
-            error
-          }
-        />
-      )}
-
-      {/* ===================================================
-          DRIVER ID
-      =================================================== */}
-
-      {step ===
-        "driver-id" && (
-        <DriverIdStep
-          driverId={
-            driverId
-          }
-          setDriverId={
-            setDriverId
-          }
-          onContinue={
-            handleDriverLink
-          }
-          onBack={() => {
-            setError("");
-
-            setStep(
-              "driver-choice"
-            );
-          }}
-          loading={
-            loading
-          }
-          error={
-            error
-          }
-        />
-      )}
-
-      {/* ===================================================
           MAP PICKER OVERLAY
       =================================================== */}
 
       {mapMode && (
         <MapPicker
-          initialLatitude={
-            mapMode === "parent"
-              ? form.latitude ?? 17.385
-              : mapChildIndex !== null
-                ? mapMode === "pickup"
-                  ? children[mapChildIndex]?.location?.lat ?? 17.385
-                  : children[mapChildIndex]?.dropLocationCoords?.lat ?? 17.385
-                : 17.385
-          }
-          initialLongitude={
-            mapMode === "parent"
-              ? form.longitude ?? 78.486
-              : mapChildIndex !== null
-                ? mapMode === "pickup"
-                  ? children[mapChildIndex]?.location?.lng ?? 78.486
-                  : children[mapChildIndex]?.dropLocationCoords?.lng ?? 78.486
-                : 78.486
-          }
+          initialLatitude={form.latitude ?? 17.385}
+          initialLongitude={form.longitude ?? 78.486}
           onConfirm={
             handleMapChange
           }
