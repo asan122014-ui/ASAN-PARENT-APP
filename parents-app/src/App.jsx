@@ -30,7 +30,6 @@ import {
   saveParentFcmToken,
 } from "./api/parentApi";
 
-import splashscreen from "./assets/splashscreen.png";
 import Onboarding from "./components/Onboarding";
 
 /* =========================================================
@@ -126,69 +125,9 @@ const normalizePath = (
   );
 };
 
-/* =========================================================
-   SPLASH SCREEN
-========================================================= */
-
-const SPLASH_SESSION_KEY = "asanrides_splash_shown";
-const SPLASH_DURATION = 2200;
 const ONBOARDING_KEY = "asanrides_onboarding_completed";
 
-function SplashScreen() {
-  return (
-    <div
-      className="
-        fixed
-        inset-0
-        z-[99999]
-        h-screen
-        w-screen
-        overflow-hidden
-        bg-white
-      "
-    >
-      <img
-        src={splashscreen}
-        alt="Asanrides"
-        className="
-          h-full
-          w-full
-          object-cover
-        "
-        draggable={false}
-      />
-    </div>
-  );
-}
-
-/* =========================================================
-   APP
-========================================================= */
-
 function App() {
-  /* =======================================================
-     SPLASH SCREEN STATE
-  ======================================================= */
-
-  const [showSplash, setShowSplash] =
-    useState(() => {
-      try {
-        return (
-          sessionStorage.getItem(
-            SPLASH_SESSION_KEY
-          ) !== "true"
-        );
-      } catch (error) {
-        console.warn(
-          "Unable to read splash session state:",
-          error
-        );
-
-        return true;
-      }
-    });
-
-
   /* =======================================================
      ONBOARDING STATE
      Shows only once per installation.
@@ -242,56 +181,6 @@ function App() {
     }
   };
 
-  /* =======================================================
-     SPLASH SCREEN LIFECYCLE
-
-     Behaviour:
-
-     Fresh app launch
-       -> show splash
-
-     Browser/WebView refresh
-       -> don't show splash again
-
-     App goes to background and returns
-       -> don't show splash again
-
-     App process/session is destroyed and opened again
-       -> sessionStorage is recreated
-       -> show splash again
-  ======================================================= */
-
-  useEffect(() => {
-    if (!showSplash) {
-      return;
-    }
-
-    try {
-      sessionStorage.setItem(
-        SPLASH_SESSION_KEY,
-        "true"
-      );
-    } catch (error) {
-      console.warn(
-        "Unable to save splash session state:",
-        error
-      );
-    }
-
-    const splashTimer =
-      window.setTimeout(
-        () => {
-          setShowSplash(false);
-        },
-        SPLASH_DURATION
-      );
-
-    return () => {
-      window.clearTimeout(
-        splashTimer
-      );
-    };
-  }, [showSplash]);
   /* =======================================================
      PUSH TOKEN
   ======================================================= */
@@ -1145,10 +1034,6 @@ function App() {
   /* =======================================================
      ROUTES
   ======================================================= */
-
-  if (showSplash) {
-    return <SplashScreen />;
-  }
 
   if (showOnboarding) {
     return (
