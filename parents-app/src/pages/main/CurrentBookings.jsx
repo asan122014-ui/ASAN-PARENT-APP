@@ -90,6 +90,7 @@ function CurrentBookings() {
           {bookings.map((booking) => {
             const status = getStatus(booking);
             const child = booking.childId || booking.child || {};
+            const childNames = (booking.children?.length ? booking.children : [child]).map((item) => item?.name).filter(Boolean).join(", ");
             const cancellable = canCancelStatuses.has(booking.status) && booking.driverRequestId?.status !== "Cancelled";
             return (
               <article key={booking._id} className="overflow-hidden rounded-[19px] border border-[#EFE4D0] bg-[#FFFDF8]">
@@ -97,7 +98,7 @@ function CurrentBookings() {
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[8px] font-extrabold uppercase tracking-[1.3px] text-[#95897C]">{child.name || "Child ride"}</p>
+                      <p className="text-[8px] font-extrabold uppercase tracking-[1.3px] text-[#95897C]">{childNames || "Child ride"}</p>
                       <h3 className="mt-1 truncate text-[13px] font-extrabold text-black">{child.school || "School route"}</h3>
                     </div>
                     <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[8px] font-extrabold ${status.tone === "green" ? "bg-[#EAF5ED] text-[#35764B]" : "bg-[#FFF1C8] text-[#946900]"}`}>
