@@ -25,11 +25,8 @@ import {
   Phone,
   User,
   Car,
-  Camera,
   MessageCircle,
   Share2,
-  Maximize2,
-  Minimize2,
   LocateFixed,
   Layers3,
   ShieldAlert,
@@ -353,13 +350,7 @@ function Tracking() {
   ] =
     useState(true);
 
-  const [
-    cameraFullscreen,
-    setCameraFullscreen,
-  ] =
-    useState(false);
-
-  const [
+const [
     showDriverInfo,
     setShowDriverInfo,
   ] =
@@ -381,19 +372,7 @@ function Tracking() {
   const prevPositionRef =
     useRef(null);
 
-  const remoteVideoRef =
-    useRef(null);
-
-  const pcRef =
-    useRef(null);
-
-  const cameraRequestedRef =
-    useRef(false);
-
-  const iceQueueRef =
-    useRef([]);
-
-  /* =======================================================
+/* =======================================================
      PARENT
   ======================================================= */
 
@@ -792,58 +771,7 @@ function Tracking() {
     };
 
   /* =======================================================
-     ATTACH VIDEO
-  ======================================================= */
-
-  const attachVideo =
-    (
-      video,
-      stream
-    ) => {
-      video.srcObject =
-        stream;
-
-      video.muted =
-        true;
-
-      video.autoplay =
-        true;
-
-      video.playsInline =
-        true;
-
-      video.onloadedmetadata =
-        async () => {
-          try {
-            await video.play();
-          } catch (
-            error
-          ) {
-            console.error(
-              "Video play error:",
-              error
-            );
-          }
-        };
-    };
-
-  /* =======================================================
-     ACTIVE TRIP
-  ======================================================= */
-
-  const hasActiveTrip =
-    students.some(
-      (
-        student
-      ) =>
-        student.status ===
-          "waiting" ||
-        student.status ===
-          "onboard"
-    );
-
-  /* =======================================================
-     SOCKET + WEBRTC
+     SOCKET + LIVE TRACKING
   ======================================================= */
 
   useEffect(() => {
@@ -894,10 +822,6 @@ function Tracking() {
           "Parent tracking socket connected:",
           socket.id
         );
-
-        cameraRequestedRef.current =
-          false;
-
         socket.emit(
           "join_driver_room",
 
@@ -941,278 +865,6 @@ function Tracking() {
           eventName,
           refreshTripState
         );
-      }
-    );
-
-    /* =====================================================
-       OFFER
-    ===================================================== */
-
-    socket.on(
-      "offer",
-
-      async ({
-        offer,
-
-        parentId:
-          offerParentId,
-      }) => {
-        if (
-          String(
-            offerParentId
-          ) !==
-          String(
-            parentId
-          )
-        ) {
-          return;
-        }
-
-        if (
-          pcRef.current
-        ) {
-          pcRef.current
-            .close();
-
-          pcRef.current =
-            null;
-
-          iceQueueRef.current =
-            [];
-        }
-
-        const pc =
-          new RTCPeerConnection(
-            {
-              iceServers: [
-                {
-                  urls:
-                    "stun:stun.l.google.com:19302",
-                },
-              ],
-            }
-          );
-
-        pcRef.current =
-          pc;
-
-        pc.onicecandidate =
-          (
-            event
-          ) => {
-            if (
-              event.candidate
-            ) {
-              socket.emit(
-                "ice-candidate",
-
-                {
-                  candidate:
-                    event.candidate,
-
-                  driverId,
-
-                  parentId,
-
-                  sender:
-                    "parent",
-                }
-              );
-            }
-          };
-
-        pc.addTransceiver(
-          "video",
-
-          {
-            direction:
-              "recvonly",
-          }
-        );
-
-        pc.ontrack =
-          (
-            event
-          ) => {
-            const video =
-              remoteVideoRef
-                .current;
-
-            const stream =
-              event
-                .streams?.[0];
-
-            if (
-              !video ||
-              !stream
-            ) {
-              return;
-            }
-
-            const track =
-              stream
-                .getVideoTracks()
-                ?.[0];
-
-            attachVideo(
-              video,
-              stream
-            );
-
-            const playVideo =
-              () => {
-                video
-                  .play()
-                  .catch(
-                    (
-                      error
-                    ) => {
-                      console.error(
-                        "Video play error:",
-                        error
-                      );
-                    }
-                  );
-              };
-
-            if (
-              track?.muted
-            ) {
-              track.onunmute =
-                playVideo;
-            } else {
-              playVideo();
-            }
-          };
-
-        try {
-          await pc
-            .setRemoteDescription(
-              new RTCSessionDescription(
-                offer
-              )
-            );
-
-          while (
-            iceQueueRef
-              .current
-              .length
-          ) {
-            const candidate =
-              iceQueueRef
-                .current
-                .shift();
-
-            try {
-              await pc
-                .addIceCandidate(
-                  new RTCIceCandidate(
-                    candidate
-                  )
-                );
-            } catch (
-              error
-            ) {
-              console.error(
-                "ICE queue error:",
-                error
-              );
-            }
-          }
-
-          const answer =
-            await pc
-              .createAnswer();
-
-          await pc
-            .setLocalDescription(
-              answer
-            );
-
-          socket.emit(
-            "answer",
-
-            {
-              answer,
-
-              driverId,
-
-              parentId,
-            }
-          );
-        } catch (
-          error
-        ) {
-          console.error(
-            "WebRTC error:",
-            error
-          );
-        }
-      }
-    );
-
-    /* =====================================================
-       RECEIVE ICE
-    ===================================================== */
-
-    socket.on(
-      "ice-candidate",
-
-      async ({
-        candidate,
-
-        parentId:
-          candidateParentId,
-      }) => {
-        if (
-          String(
-            candidateParentId
-          ) !==
-          String(
-            parentId
-          )
-        ) {
-          return;
-        }
-
-        try {
-          if (
-            !pcRef.current
-          ) {
-            iceQueueRef
-              .current
-              .push(
-                candidate
-              );
-
-            return;
-          }
-
-          if (
-            pcRef.current
-              .remoteDescription
-          ) {
-            await pcRef.current
-              .addIceCandidate(
-                new RTCIceCandidate(
-                  candidate
-                )
-              );
-          } else {
-            iceQueueRef
-              .current
-              .push(
-                candidate
-              );
-          }
-        } catch (
-          error
-        ) {
-          console.error(
-            "ICE error:",
-            error
-          );
-        }
       }
     );
 
@@ -1300,20 +952,7 @@ function Tracking() {
     ===================================================== */
 
     return () => {
-      iceQueueRef.current =
-        [];
-
-      if (
-        pcRef.current
-      ) {
-        pcRef.current
-          .close();
-
-        pcRef.current =
-          null;
-      }
-
-      [
+[
         "student_picked_up",
         "student_dropped",
         "student_absent",
@@ -1335,43 +974,6 @@ function Tracking() {
   }, [
     driverId,
     fetchTrackingData,
-    parentId,
-  ]);
-
-  /* =======================================================
-     REQUEST CAMERA
-  ======================================================= */
-
-  useEffect(() => {
-    if (
-      socketRef.current
-        ?.connected &&
-      hasActiveTrip &&
-      !cameraRequestedRef
-        .current
-    ) {
-      socketRef.current.emit(
-        "start_camera",
-
-        {
-          driverId,
-          parentId,
-        }
-      );
-
-      cameraRequestedRef.current =
-        true;
-    }
-
-    if (
-      !hasActiveTrip
-    ) {
-      cameraRequestedRef.current =
-        false;
-    }
-  }, [
-    hasActiveTrip,
-    driverId,
     parentId,
   ]);
 
@@ -3116,223 +2718,6 @@ function Tracking() {
                 childStatus
               }
             </span>
-          </div>
-        </section>
-
-        {/* =================================================
-            LIVE CAMERA
-        ================================================= */}
-
-        <section
-          className={`
-            ${
-              cameraFullscreen
-                ? "fixed inset-0 z-[200] bg-[#FFF9EE] p-3"
-                : "mx-3 mt-4"
-            }
-          `}
-        >
-          <div
-            className={`
-              relative
-              overflow-hidden
-              border
-              border-[#EACB69]
-              bg-[#FFFDF7]
-              shadow-[0_10px_28px_rgba(90,70,15,0.07)]
-
-              ${
-                cameraFullscreen
-                  ? "h-full w-full rounded-[24px]"
-                  : "rounded-[22px]"
-              }
-            `}
-          >
-            {/* CAMERA HEADER */}
-
-            <div
-              className="
-                flex
-                h-[54px]
-                items-center
-                justify-between
-                border-b
-                border-[#F0E4BF]
-                bg-white
-                px-4
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-2
-                "
-              >
-                <Camera
-                  size={17}
-                  className="
-                    text-[#C98E00]
-                  "
-                />
-
-                <span
-                  className="
-                    text-[12px]
-                    font-bold
-                    text-black
-                  "
-                >
-                  Live Camera
-                </span>
-
-                {hasActiveTrip && (
-                  <span
-                    className="
-                      flex
-                      items-center
-                      gap-1
-                      rounded-full
-                      bg-[#FFF1BA]
-                      px-2
-                      py-1
-                      text-[8px]
-                      font-extrabold
-                      text-black
-                    "
-                  >
-                    <span
-                      className="
-                        h-[5px]
-                        w-[5px]
-                        animate-pulse
-                        rounded-full
-                        bg-[#FFB400]
-                      "
-                    />
-
-                    LIVE
-                  </span>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setCameraFullscreen(
-                    (
-                      previous
-                    ) =>
-                      !previous
-                  )
-                }
-                className="
-                  flex
-                  h-9
-                  w-9
-                  items-center
-                  justify-center
-                  rounded-[11px]
-                  border
-                  border-[#EEE2C1]
-                  bg-[#FFF9E8]
-                  text-[#A97300]
-                "
-              >
-                {cameraFullscreen ? (
-                  <Minimize2
-                    size={17}
-                  />
-                ) : (
-                  <Maximize2
-                    size={17}
-                  />
-                )}
-              </button>
-            </div>
-
-            {/* CAMERA BODY */}
-
-            {hasActiveTrip ? (
-              <video
-                ref={
-                  remoteVideoRef
-                }
-                autoPlay
-                playsInline
-                muted
-                className={`
-                  w-full
-                  object-cover
-
-                  ${
-                    cameraFullscreen
-                      ? "h-[calc(100%_-_54px)]"
-                      : "h-[210px]"
-                  }
-                `}
-              />
-            ) : (
-              <div
-                className={`
-                  flex
-                  flex-col
-                  items-center
-                  justify-center
-                  bg-[#FFF9EA]
-                  px-6
-                  text-center
-
-                  ${
-                    cameraFullscreen
-                      ? "h-[calc(100%_-_54px)]"
-                      : "h-[210px]"
-                  }
-                `}
-              >
-                <div
-                  className="
-                    flex
-                    h-14
-                    w-14
-                    items-center
-                    justify-center
-                    rounded-[18px]
-                    bg-[#FFF0B7]
-                    text-[#A97300]
-                  "
-                >
-                  <Camera
-                    size={27}
-                  />
-                </div>
-
-                <p
-                  className="
-                    mt-4
-                    text-[13px]
-                    font-bold
-                    text-black
-                  "
-                >
-                  Live camera unavailable
-                </p>
-
-                <p
-                  className="
-                    mt-1
-                    max-w-[260px]
-                    text-[9px]
-                    leading-4
-                    text-zinc-500
-                  "
-                >
-                  Camera starts automatically
-                  when the driver begins an
-                  active trip.
-                </p>
-              </div>
-            )}
           </div>
         </section>
 
