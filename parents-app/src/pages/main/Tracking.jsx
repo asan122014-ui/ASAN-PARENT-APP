@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useRef,
@@ -175,6 +176,19 @@ const getStoredLocation =
     };
   };
 
+const distanceBetween = (from, to) => {
+  const latA = Number(from?.lat);
+  const lngA = Number(from?.lng);
+  const latB = Number(to?.lat);
+  const lngB = Number(to?.lng);
+  if (![latA, lngA, latB, lngB].every(Number.isFinite)) return Number.POSITIVE_INFINITY;
+  const radians = (value) => (value * Math.PI) / 180;
+  const deltaLat = radians(latB - latA);
+  const deltaLng = radians(lngB - lngA);
+  const arc = Math.sin(deltaLat / 2) ** 2 + Math.cos(radians(latA)) * Math.cos(radians(latB)) * Math.sin(deltaLng / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc));
+};
+
 /* =========================================================
    MAP STYLE
 ========================================================= */
@@ -283,6 +297,16 @@ function Tracking() {
     useState(null);
 
   const [
+    heading,
+    setHeading,
+  ] = useState(0);
+
+  const [
+    selectedStop,
+    setSelectedStop,
+  ] = useState(null);
+
+  const [
     fallback,
     setFallback,
   ] =
@@ -328,9 +352,16 @@ function Tracking() {
   ] =
     useState([]);
 
+  const [
+    routeStops,
+    setRouteStops,
+  ] = useState([]);
+
+  const mapStops = routeStops.length ? routeStops : students;
+
   const tripPhase =
-    students.length > 0 &&
-    !students.some(
+    mapStops.length > 0 &&
+    !mapStops.some(
       (
         student
       ) =>
@@ -432,9 +463,8 @@ const [
         student
       ) => {
         const isEvening =
-          new Date()
-            .getHours() >=
-          12;
+          driver?.activeTripType === "afternoon" ||
+          (!driver?.activeTripType && new Date().getHours() >= 12);
 
         if (
           tripPhase ===
@@ -455,6 +485,7 @@ const [
       },
       [
         tripPhase,
+        driver?.activeTripType,
       ]
     );
 
@@ -496,6 +527,19 @@ const [
         scale,
       };
     };
+
+  const getVehicleMarker = () => {
+    if (!window.google?.maps) return undefined;
+    return {
+      path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+      fillColor: "#FFB400",
+      fillOpacity: 1,
+      strokeColor: "#FFFFFF",
+      strokeWeight: 2,
+      scale: 7,
+      rotation: Number(heading) || 0,
+    };
+  };
 
   /* =======================================================
      FALLBACK LOCATION
@@ -590,10 +634,25 @@ const [
             driverData
           );
 
+          setRouteStops(
+            Array.isArray(driverData?.routeStops)
+              ? driverData.routeStops.map((stop) => ({
+                  ...stop,
+                  _id: stop.childId || stop._id,
+                  status: normalizeStudentStatus(stop.status),
+                }))
+              : []
+          );
+
           const storedLocation =
             getStoredLocation(
               driverData
             );
+
+          const storedHeading = Number(driverData?.lastLocation?.heading);
+          if (Number.isFinite(storedHeading) && storedHeading >= 0 && storedHeading <= 360) {
+            setHeading(storedHeading);
+          }
 
           if (
             storedLocation
@@ -907,14 +966,21 @@ const [
           };
 
         if (
-          !Number.isFinite(
-            newPosition.lat
-          ) ||
-          !Number.isFinite(
-            newPosition.lng
-          )
+          !Number.isFinite(newPosition.lat) ||
+          !Number.isFinite(newPosition.lng)
         ) {
           return;
+        }
+
+        const liveHeading = Number(data.heading);
+        if (Number.isFinite(liveHeading) && liveHeading >= 0 && liveHeading <= 360) {
+          setHeading(liveHeading);
+        } else if (prevPositionRef.current) {
+          const angle = Math.atan2(
+            Math.sin((newPosition.lng - prevPositionRef.current.lng) * Math.PI / 180) * Math.cos(newPosition.lat * Math.PI / 180),
+            Math.cos(prevPositionRef.current.lat * Math.PI / 180) * Math.sin(newPosition.lat * Math.PI / 180) - Math.sin(prevPositionRef.current.lat * Math.PI / 180) * Math.cos(newPosition.lat * Math.PI / 180) * Math.cos((newPosition.lng - prevPositionRef.current.lng) * Math.PI / 180)
+          );
+          setHeading((angle * 180 / Math.PI + 360) % 360);
         }
 
         if (
@@ -981,27 +1047,52 @@ const [
      NEXT STUDENT
   ======================================================= */
 
-  const nextStudent =
-    students.find(
-      (
-        student
-      ) => {
-        if (
-          tripPhase ===
-          "pickup"
-        ) {
-          return (
-            student.status ===
-            "waiting"
-          );
-        }
+  const activeStops = mapStops.filter((student) => {
+    const coords = getCoords(student);
+    const hasLocation = Number.isFinite(Number(coords?.lat)) && Number.isFinite(Number(coords?.lng));
+    return hasLocation && (tripPhase === "pickup"
+      ? student.status === "waiting"
+      : student.status === "onboard");
+  });
 
-        return (
-          student.status ===
-          "onboard"
-        );
+  const orderedRouteStops = [];
+  const unvisitedStops = [...activeStops];
+  let routeOrigin = position || fallback;
+  while (unvisitedStops.length) {
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    unvisitedStops.forEach((student, index) => {
+      const candidateDistance = distanceBetween(routeOrigin, getCoords(student));
+      if (candidateDistance < nearestDistance) {
+        nearestDistance = candidateDistance;
+        nearestIndex = index;
       }
-    );
+    });
+    const [nearestStop] = unvisitedStops.splice(nearestIndex, 1);
+    orderedRouteStops.push(nearestStop);
+    routeOrigin = getCoords(nearestStop) || routeOrigin;
+  }
+
+  const nextStudent = orderedRouteStops[0] || null;
+
+  const ownStopLabels = students
+    .map((child) => {
+      const childId = String(child._id || "");
+      const routeIndex = orderedRouteStops.findIndex(
+        (stop) => String(stop.childId || stop._id || "") === childId
+      );
+      const childStatus = mapStops.find(
+        (stop) => String(stop.childId || stop._id || "") === childId
+      )?.status;
+      const statusLabel = childStatus === "onboard"
+        ? "Picked up"
+        : childStatus === "dropped"
+          ? "Reached"
+          : childStatus === "absent"
+            ? "Absent"
+            : "Location unavailable";
+      return { childId, routeIndex, child, statusLabel };
+    });
 
   /* =======================================================
      ROUTE + ETA
@@ -1010,7 +1101,7 @@ const [
   useEffect(() => {
     if (
       !position ||
-      !nextStudent ||
+      !orderedRouteStops.length ||
       !isLoaded ||
       !window.google
     ) {
@@ -1038,19 +1129,17 @@ const [
     lastRouteCall.current =
       now;
 
-    const target =
-      getCoords(
-        nextStudent
-      );
+    const validRouteStops = orderedRouteStops
+      .map((student) => ({ student, coords: getCoords(student) }))
+      .filter(({ coords }) => Number.isFinite(Number(coords?.lat)) && Number.isFinite(Number(coords?.lng)))
+      .slice(0, 25);
 
-    if (
-      target?.lat ==
-        null ||
-      target?.lng ==
-        null
-    ) {
+    if (!validRouteStops.length) {
       return;
     }
+
+    const nextStopCoordinates = validRouteStops[0].coords;
+    const finalStopCoordinates = validRouteStops[validRouteStops.length - 1].coords;
 
     const service =
       new window
@@ -1063,18 +1152,15 @@ const [
         origin:
           position,
 
-        destination:
-          {
-            lat:
-              Number(
-                target.lat
-              ),
+        destination: {
+          lat: Number(finalStopCoordinates.lat),
+          lng: Number(finalStopCoordinates.lng),
+        },
 
-            lng:
-              Number(
-                target.lng
-              ),
-          },
+        waypoints: validRouteStops.slice(0, -1).map(({ coords }) => ({
+          location: { lat: Number(coords.lat), lng: Number(coords.lng) },
+          stopover: true,
+        })),
 
         travelMode:
           window
@@ -1105,10 +1191,7 @@ const [
             result
           );
 
-          const leg =
-            result
-              .routes?.[0]
-              ?.legs?.[0];
+          const leg = result.routes?.[0]?.legs?.[0];
 
           setEta(
             leg
@@ -1121,9 +1204,7 @@ const [
           );
 
           setDistance(
-            leg
-              ?.distance
-              ?.text ||
+            leg?.distance?.text ||
               "--"
           );
         } else {
@@ -1149,7 +1230,7 @@ const [
   }, [
     getCoords,
     position,
-    nextStudent,
+    orderedRouteStops,
     isLoaded,
     tripPhase,
   ]);
@@ -1775,25 +1856,8 @@ const [
                       smoothPosition
                     }
                     icon={
-                      getCircleMarker(
-                        "#FFB400",
-                        "#FFFFFF",
-                        12
-                      )
+                      getVehicleMarker()
                     }
-                    label={{
-                      text:
-                        "V",
-
-                      color:
-                        "#111111",
-
-                      fontWeight:
-                        "800",
-
-                      fontSize:
-                        "10px",
-                    }}
                     onMouseOver={() =>
                       setShowDriverInfo(
                         true
@@ -2135,110 +2199,32 @@ const [
                 </>
               )}
 
-              {/* ===============================================
-                  NEXT STOP
-              =============================================== */}
-
-              {nextStudent &&
-                getCoords(
-                  nextStudent
-                )?.lat !=
-                  null && (
-                  <Marker
-                    position={{
-                      lat:
-                        Number(
-                          getCoords(
-                            nextStudent
-                          ).lat
-                        ),
-
-                      lng:
-                        Number(
-                          getCoords(
-                            nextStudent
-                          ).lng
-                        ),
-                    }}
-                    icon={
-                      getCircleMarker(
-                        "#FFF2C4",
-                        "#FFB400",
-                        11
-                      )
-                    }
-                    label={{
-                      text:
-                        tripPhase ===
-                        "pickup"
-                          ? "H"
-                          : "S",
-
-                      color:
-                        "#111111",
-
-                      fontWeight:
-                        "800",
-
-                      fontSize:
-                        "10px",
-                    }}
-                  />
-                )}
-
-              {/* ===============================================
-                  OTHER STOPS
-              =============================================== */}
-
-              {showStops &&
-                students.map(
-                  (
-                    student
-                  ) => {
-                    const coords =
-                      getCoords(
-                        student
-                      );
-
-                    if (
-                      coords?.lat ==
-                        null ||
-                      coords?.lng ==
-                        null ||
-                      student._id ===
-                        nextStudent
-                          ?._id
-                    ) {
-                      return null;
-                    }
-
-                    return (
-                      <Marker
-                        key={
-                          student._id
-                        }
-                        position={{
-                          lat:
-                            Number(
-                              coords.lat
-                            ),
-
-                          lng:
-                            Number(
-                              coords.lng
-                            ),
-                        }}
-                        icon={
-                          getCircleMarker(
-                            "#FFE9A1",
-                            "#FFB400",
-                            7
-                          )
-                        }
-                      />
-                    );
-                  }
-                )}
+              {/* Ordered child stops: the parent's child gets a dark outlined pin. */}
+              {showStops && mapStops.map((student) => {
+                const coords = getCoords(student);
+                if (!Number.isFinite(Number(coords?.lat)) || !Number.isFinite(Number(coords?.lng))) return null;
+                const childId = String(student.childId || student._id || "");
+                const isOwnStop = students.some((child) => String(child._id) === childId);
+                const activeStopIndex = orderedRouteStops.findIndex((stop) => String(stop.childId || stop._id) === childId);
+                const stopNumber = activeStopIndex >= 0 ? String(activeStopIndex + 1) : "✓";
+                const isSelected = String(selectedStop?.childId || selectedStop?._id || "") === childId;
+                return (
+                  <Fragment key={childId || student.stopOrder}>
+                    <Marker
+                      position={{ lat: Number(coords.lat), lng: Number(coords.lng) }}
+                      icon={getCircleMarker(isOwnStop ? "#FFB400" : activeStopIndex >= 0 ? "#FFFFFF" : "#E7E5E4", isOwnStop ? "#111111" : "#D89C00", isOwnStop ? 10 : 8)}
+                      label={{ text: stopNumber, color: "#111111", fontWeight: "800", fontSize: "10px" }}
+                      onClick={() => setSelectedStop({ ...student, childId, coords, stopNumber, isOwnStop })}
+                    />
+                    {isSelected && <InfoWindow position={{ lat: Number(coords.lat), lng: Number(coords.lng) }} onCloseClick={() => setSelectedStop(null)}>
+                      <div style={{ padding: "3px 5px", fontFamily: "inherit", color: "#111111", fontSize: "12px", fontWeight: 700 }}>
+                        {isOwnStop ? "Your child's stop" : `Child stop ${stopNumber}`}
+                        <div style={{ marginTop: 3, color: "#77716A", fontSize: "11px", fontWeight: 500 }}>{student.status === "dropped" ? "Completed" : student.status === "absent" ? "Absent" : activeStopIndex >= 0 ? `Next in route: stop ${stopNumber}` : "Pickup completed"}</div>
+                      </div>
+                    </InfoWindow>}
+                  </Fragment>
+                );
+              })}
 
               {/* ===============================================
                   ROUTE
@@ -2340,6 +2326,21 @@ const [
                 </p>
               </div>
             </div>
+
+            {ownStopLabels.length > 0 && (
+              <div className="absolute left-3 top-[62px] z-10 rounded-xl border border-[#E8C95E] bg-white/95 px-3 py-2 shadow-md backdrop-blur">
+                <p className="text-[7px] font-bold uppercase tracking-[0.08em] text-[#A67500]">
+                  Your child{ownStopLabels.length > 1 ? "ren" : ""}
+                </p>
+                <p className="mt-0.5 text-[10px] font-extrabold text-zinc-900">
+                  {ownStopLabels.map(({ child, routeIndex, statusLabel }, index) => (
+                    <Fragment key={String(child._id || index)}>
+                      {index > 0 ? ", " : ""}{routeIndex >= 0 ? `Stop ${routeIndex + 1}` : statusLabel}
+                    </Fragment>
+                  ))}
+                </p>
+              </div>
+            )}
 
             {/* ===============================================
                 MAP CONTROLS

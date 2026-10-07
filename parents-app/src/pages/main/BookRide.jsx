@@ -7,16 +7,6 @@ import { createEmptyChild } from "../auth/onboarding/ChildDetailsStep";
 
 const emptyChild = { ...createEmptyChild(), estimatedDistanceKm: "", estimatedTimeMinutes: "" };
 const emptyRoute = { pickup: "", dropoff: "", distanceKm: "", durationMinutes: "" };
-const routeEstimate = (from, to) => {
-  if (!from || !to) return {};
-  const radians = (value) => (value * Math.PI) / 180;
-  const dLat = radians(to.lat - from.lat);
-  const dLng = radians(to.lng - from.lng);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(from.lat)) * Math.cos(radians(to.lat)) * Math.sin(dLng / 2) ** 2;
-  const distanceKm = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
-  return { distanceKm, durationMinutes: Math.max(1, Math.round((distanceKm / 25) * 60)) };
-};
-
 function BookRide() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -34,6 +24,38 @@ function BookRide() {
   const [bookingId, setBookingId] = useState("");
   const [bookingStatus, setBookingStatus] = useState(null);
   const [requestDelivery, setRequestDelivery] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState("");
+
+  useEffect(() => {
+    const pickupCoordinates = route.pickupCoordinates;
+    const dropoffCoordinates = route.dropoffCoordinates;
+    if (!pickupCoordinates || !dropoffCoordinates) {
+      setRouteLoading(false);
+      setRouteError("");
+      return undefined;
+    }
+
+    let active = true;
+    setRouteLoading(true);
+    setRouteError("");
+    API.post("/bookings/route-estimate", { pickupCoordinates, dropoffCoordinates })
+      .then((response) => {
+        if (!active) return;
+        const estimate = response.data?.data;
+        if (!Number.isFinite(Number(estimate?.distanceMeters)) || !Number.isFinite(Number(estimate?.distanceKm))) {
+          throw new Error("Google Maps did not return a valid road route.");
+        }
+        setRoute((current) => ({ ...current, distanceMeters: Number(estimate.distanceMeters), distanceKm: Number(estimate.distanceKm), durationMinutes: Number(estimate.durationMinutes) }));
+      })
+      .catch((err) => {
+        if (!active) return;
+        setRoute((current) => ({ ...current, distanceMeters: null, distanceKm: "", durationMinutes: "" }));
+        setRouteError(err?.response?.data?.message || err?.message || "Unable to calculate the driving route. Please try again.");
+      })
+      .finally(() => { if (active) setRouteLoading(false); });
+    return () => { active = false; };
+  }, [route.pickupCoordinates?.lat, route.pickupCoordinates?.lng, route.dropoffCoordinates?.lat, route.dropoffCoordinates?.lng]);
 
   useEffect(() => {
     if (step !== 3 || !bookingId) return undefined;
@@ -56,8 +78,10 @@ function BookRide() {
   const getQuote = async (event) => {
     event.preventDefault(); setError(""); setLoading(true);
     try {
+      if (!route.distanceMeters || routeLoading) throw new Error(routeError || "Wait for Google Maps to calculate the driving route.");
       const bookingChildren = children.map((item) => ({ ...item, school: school.trim() }));
       const response = await API.post("/bookings/quote", { children: bookingChildren, child: bookingChildren[0], vehicleType, workingDays: 26, route: { ...route, distanceKm: Number(route.distanceKm), durationMinutes: Number(route.durationMinutes || 0) } });
+      setRoute((current) => ({ ...current, distanceMeters: Number(response.data.data.route.distanceMeters), distanceKm: Number(response.data.data.route.distanceKm), durationMinutes: Number(response.data.data.route.durationMinutes) }));
       setQuote(response.data.data); setStep(2);
     } catch (err) { setError(err?.response?.data?.message || "Please complete the child and route details."); }
     finally { setLoading(false); }
@@ -83,7 +107,7 @@ function BookRide() {
   const driverAccepted = bookingStatus?.status === "awaiting_payment" || bookingStatus?.driverRequestId?.matchingStatus === "Accepted";
   const directDeliveryFailed = driverChoice === "existing" && requestDelivery?.offerSent === false && !driverAccepted;
   const inputClass = "mt-1 h-12 w-full rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-sm outline-none focus:border-[#FFB400] focus:ring-4 focus:ring-[#FFB400]/10";
-  if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, ...routeEstimate(next.pickupCoordinates, next.dropoffCoordinates) }; }); setMapMode(null); }} />;
+  if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, distanceMeters: null, distanceKm: "", durationMinutes: "" }; }); setMapMode(null); }} />;
   return <main className="min-h-screen bg-[#FFF9EE] px-4 py-5 text-black">
     <div className="mx-auto max-w-[430px]">
       <button onClick={() => navigate("/app")} className="mb-5 flex items-center gap-2 text-xs font-bold text-[#9A6A00]"><ArrowLeft size={16}/> Back to dashboard</button>
@@ -128,7 +152,7 @@ function BookRide() {
         </div>
         <button type="button" onClick={() => setChildren((current) => [...current, { ...emptyChild, school }])} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#D8B24B] bg-[#FFF9EE] text-[11px] font-extrabold text-[#8A6100]"><Plus size={15} /> Add another child</button>
         <label className="mt-4 block text-[10px] font-bold text-zinc-500">School<input required value={school} onChange={(event) => setSchool(event.target.value)} className={inputClass} placeholder="School name (shared route)" /></label>
-        <SectionTitle icon={MapPin} title="Ride information"/><LocationTimeCard label="HOME" locationLabel="Home location" timeLabel="Pickup time" value={route.pickup} time={route.pickupTime} onLocation={() => setMapMode("pickup")} onTime={(event) => setRoute((current) => ({ ...current, pickupTime: event.target.value }))} /><LocationTimeCard label="SCHOOL" locationLabel="School location" timeLabel="Pickup time" value={route.dropoff} time={route.schoolPickupTime} onLocation={() => setMapMode("dropoff")} onTime={(event) => setRoute((current) => ({ ...current, schoolPickupTime: event.target.value }))} /><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-[10px] font-bold text-zinc-500">Estimated distance<input readOnly required value={route.distanceKm ? `${route.distanceKm} km` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label><label className="text-[10px] font-bold text-zinc-500">Estimated time<input readOnly required value={route.durationMinutes ? `${route.durationMinutes} min` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label></div><label className="mt-3 block text-[10px] font-bold text-zinc-500">Vehicle type<select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={inputClass}><option value="AUTO">Auto</option><option value="VAN">Van</option></select></label><p className="mt-2 text-[9px] text-zinc-400">Search and pin both locations on the map. Distance and travel time will be filled automatically.</p>{error && <ErrorText text={error}/>}<button disabled={loading || !route.pickupCoordinates || !route.dropoffCoordinates} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-[#FFB400] px-5 font-extrabold disabled:opacity-60"><span>{loading ? "Calculating..." : "Calculate monthly price"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></form>}
+        <SectionTitle icon={MapPin} title="Ride information"/><LocationTimeCard label="HOME" locationLabel="Home location" timeLabel="Pickup time" value={route.pickup} time={route.pickupTime} onLocation={() => setMapMode("pickup")} onTime={(event) => setRoute((current) => ({ ...current, pickupTime: event.target.value }))} /><LocationTimeCard label="SCHOOL" locationLabel="School location" timeLabel="Pickup time" value={route.dropoff} time={route.schoolPickupTime} onLocation={() => setMapMode("dropoff")} onTime={(event) => setRoute((current) => ({ ...current, schoolPickupTime: event.target.value }))} /><div className="mt-3 grid grid-cols-2 gap-3"><label className="text-[10px] font-bold text-zinc-500">Estimated road distance<input readOnly required value={routeLoading ? "Calculating road route…" : route.distanceMeters ? `${route.distanceKm.toFixed(3)} km` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label><label className="text-[10px] font-bold text-zinc-500">Estimated time<input readOnly required value={routeLoading ? "Calculating…" : route.durationMinutes ? `${route.durationMinutes} min` : "Select both locations"} className={`${inputClass} bg-[#FFF9EE]`}/></label></div><label className="mt-3 block text-[10px] font-bold text-zinc-500">Vehicle type<select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={inputClass}><option value="AUTO">Auto</option><option value="VAN">Van</option></select></label><p className="mt-2 text-[9px] text-zinc-400">Distance and time use the Google Maps driving route between your pinned locations.</p>{routeError && <ErrorText text={routeError}/>}{error && <ErrorText text={error}/>}<button disabled={loading || routeLoading || !route.distanceMeters || !route.pickupCoordinates || !route.dropoffCoordinates} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-[#FFB400] px-5 font-extrabold disabled:opacity-60"><span>{loading ? "Calculating..." : "Calculate monthly price"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></form>}
       {step === 2 && quote && <div className="space-y-4"><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={RouteIcon} title="Your monthly price"/><div className="rounded-[17px] bg-[#FFF9EE] p-4"><div className="flex justify-between text-xs text-zinc-500"><span>{quote.route.distanceKm} km route · {quote.quote.childCount} {quote.quote.childCount === 1 ? "child" : "children"}</span><span>Valid for 15 minutes</span></div><p className="mt-2 text-[10px] text-zinc-500">{(quote.children || [quote.child]).map((child) => child.name).join(", ")}</p><div className="mt-4 space-y-2 text-xs"><div><div className="flex justify-between"><span>Distance charge</span><span className="font-bold text-black">₹{Number(quote.quote.distanceCharge).toLocaleString("en-IN")}</span></div><p className="mt-1 text-[10px] text-zinc-500">₹{Number(quote.quote.dailyDistanceCharge ?? (Number(quote.quote.distanceCharge) / Number(quote.quote.workingDays || 26))).toLocaleString("en-IN")} per day × {quote.quote.workingDays} working days</p></div><Line label="Additional child charge" value={quote.quote.additionalChildCharge}/><Line label="Ride subtotal" value={quote.quote.rideSubtotal}/><Line label="Platform fee (2%)" value={quote.quote.platformFee}/><Line label="Tax" value={quote.quote.tax}/><Line label="Discount" value={quote.quote.discount}/></div><div className="mt-4 flex justify-between border-t border-[#EBDCA9] pt-4 text-lg font-extrabold"><span>Monthly total</span><span>₹{quote.quote.totalMonthly.toLocaleString("en-IN")}</span></div></div></div><div className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="Choose your driver path"/><button onClick={() => setDriverChoice("existing")} className={`mb-3 w-full rounded-[17px] border p-4 text-left ${driverChoice === "existing" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I already have a driver</b><p className="mt-1 text-[10px] text-zinc-500">Send this request to a verified ASAN driver.</p></button><button onClick={() => setDriverChoice("new")} className={`w-full rounded-[17px] border p-4 text-left ${driverChoice === "new" ? "border-[#FFB400] bg-[#FFF9EE]" : "border-[#EBDCA9]"}`}><b className="text-sm">I need a new driver</b><p className="mt-1 text-[10px] text-zinc-500">We will search for an available driver near your route.</p></button>{driverChoice === "existing" && <label className="mt-4 block text-[10px] font-bold text-zinc-500">Driver ASAN ID<input value={driverId} onChange={(e) => setDriverId(e.target.value.toUpperCase())} className={inputClass} placeholder="ASAN-XXXX"/></label>}<label className="mt-4 block text-[10px] font-bold text-zinc-500">Preferred start date<input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass}/></label>{error && <ErrorText text={error}/>}<button disabled={loading || !driverChoice || (driverChoice === "existing" && driverId.length < 3)} onClick={submitRequest} className="mt-5 flex h-13 w-full items-center justify-between rounded-[17px] bg-black px-5 font-extrabold text-white disabled:opacity-40"><span>{loading ? "Sending request..." : "Send driver request"}</span>{loading ? <LoaderCircle className="animate-spin" size={18}/> : <ArrowRight size={18}/>}</button></div></div>}
       {step === 3 && <div className="rounded-[24px] border border-[#EBDCA9] bg-white p-7 text-center shadow-[0_12px_35px_rgba(101,76,17,0.07)]">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><CheckCircle2 size={30}/></div>
