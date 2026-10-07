@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ArrowLeft,
@@ -21,161 +18,373 @@ import {
   Save,
   GraduationCap,
   CheckCircle2,
-  MapPinned,
   AlertTriangle,
   CircleAlert,
   Info,
+  Search,
+  Loader2,
+  Check,
+  X,
 } from "lucide-react";
 
 import BottomNav from "../../components/layout/BottomNav";
+import { API } from "../../api/api";
+import { GoogleMap, useJsApiLoader } from "@react-google-maps/api";
 
-import {
-  API,
-} from "../../api/api";
+const createEmptyForm = () => ({
+  name: "",
+  age: "",
+  gender: "",
+  school: "",
+  grade: "",
+  section: "",
+  pickupTime: "",
+  eveningPickup: "",
+  pickupLocation: "",
+  dropoffLocation: "",
+  pickupCoords: { lat: null, lng: null },
+  dropoffCoords: { lat: null, lng: null },
+  medicalNotes: "",
+  emergencyContact: "",
+});
 
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  useMapEvents,
-} from "react-leaflet";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_LOADER_ID = "asan-parent-google-map";
+const GOOGLE_MAP_LIBRARIES = ["places", "marker"];
+const FALLBACK_LOCATION = { lat: 17.385044, lng: 78.486671 };
+const mapContainerStyle = { width: "100%", height: "100%" };
 
-import "leaflet/dist/leaflet.css";
+const hasValidCoords = (coords) => {
+  if (!coords) return false;
+  if (coords.lat === null || coords.lat === undefined || coords.lat === "") return false;
+  if (coords.lng === null || coords.lng === undefined || coords.lng === "") return false;
+  const lat = Number(coords.lat);
+  const lng = Number(coords.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+};
 
-/* =========================================================
-   CREATE EMPTY FORM
-========================================================= */
+function GoogleLocationPicker({ mapType, initialCoords, initialAddress, onConfirm, onClose }) {
+  const validInitialCoords = hasValidCoords(initialCoords)
+    ? { lat: Number(initialCoords.lat), lng: Number(initialCoords.lng) }
+    : null;
 
-const createEmptyForm =
-  () => ({
-    name: "",
+  const [markerPosition, setMarkerPosition] = useState(validInitialCoords || FALLBACK_LOCATION);
+  const [mapCenter, setMapCenter] = useState(validInitialCoords || FALLBACK_LOCATION);
+  const [selectedAddress, setSelectedAddress] = useState(initialAddress || "");
+  const [searchValue, setSearchValue] = useState(initialAddress || "");
+  const [geocoding, setGeocoding] = useState(false);
+  const [locatingUser, setLocatingUser] = useState(!validInitialCoords);
+  const [searching, setSearching] = useState(false);
+  const [mapError, setMapError] = useState("");
 
-    age: "",
+  const mapRef = useRef(null);
+  const advancedMarkerRef = useRef(null);
+  const autocompleteHostRef = useRef(null);
+  const autocompleteElementRef = useRef(null);
 
-    gender: "",
-
-    school: "",
-
-    grade: "",
-
-    section: "",
-
-    pickupTime: "",
-
-    eveningPickup: "",
-
-    pickupLocation: "",
-
-    dropoffLocation: "",
-
-    pickupCoords: {
-      lat: null,
-      lng: null,
-    },
-
-    dropoffCoords: {
-      lat: null,
-      lng: null,
-    },
-
-    medicalNotes: "",
-
-    emergencyContact: "",
+  const { isLoaded: googleMapsLoaded, loadError: googleMapsLoadError } = useJsApiLoader({
+    id: GOOGLE_MAPS_LOADER_ID,
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
+    libraries: GOOGLE_MAP_LIBRARIES,
   });
 
-/* =========================================================
-   MAP PICKER
-========================================================= */
+  const reverseGeocode = async (lat, lng) => {
+    setGeocoding(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,
+        { headers: { Accept: "application/json" } }
+      );
+      if (!response.ok) throw new Error(`Reverse geocoding failed (${response.status})`);
+      const data = await response.json();
+      const address = data?.display_name || `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+      setSelectedAddress(address);
+      setSearchValue(address);
+      return address;
+    } catch (error) {
+      console.warn("Reverse geocoding failed:", error);
+      const fallback = `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+      setSelectedAddress(fallback);
+      setSearchValue(fallback);
+      return fallback;
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
-function LocationPicker({
-  onSelect,
-}) {
-  const [
-    position,
-    setPosition,
-  ] =
-    useState(null);
+  const movePin = (coords, zoom = 17, resolveAddress = true) => {
+    if (!hasValidCoords(coords)) return;
+    const next = { lat: Number(coords.lat), lng: Number(coords.lng) };
+    setMarkerPosition(next);
+    setMapCenter(next);
+    if (mapRef.current) {
+      mapRef.current.panTo(next);
+      mapRef.current.setZoom(zoom);
+    }
+    if (resolveAddress) reverseGeocode(next.lat, next.lng);
+  };
 
-  /* =======================================================
-     GET ADDRESS
-  ======================================================= */
+  useEffect(() => {
+    if (!googleMapsLoaded || googleMapsLoadError) return;
+    if (validInitialCoords) {
+      setLocatingUser(false);
+      if (!initialAddress) reverseGeocode(validInitialCoords.lat, validInitialCoords.lng);
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocatingUser(false);
+      if (!initialAddress) reverseGeocode(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+      return;
+    }
+    setLocatingUser(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
+        movePin(coords, 17, true);
+        setLocatingUser(false);
+      },
+      (error) => {
+        console.warn("Unable to get current location:", error);
+        setLocatingUser(false);
+        if (!initialAddress) reverseGeocode(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }, [googleMapsLoaded, googleMapsLoadError]);
 
-  const getAddress =
-    async (
-      lat,
-      lng
-    ) => {
+  useEffect(() => {
+    if (!googleMapsLoaded || !window.google?.maps?.places || !autocompleteHostRef.current) return;
+    if (!window.google.maps.places.PlaceAutocompleteElement) return;
+
+    const host = autocompleteHostRef.current;
+    host.innerHTML = "";
+
+    const autocomplete = new window.google.maps.places.PlaceAutocompleteElement({
+      includedRegionCodes: ["in"],
+    });
+    autocomplete.placeholder = mapType === "pickup"
+      ? "Search home area, building or street..."
+      : "Search school area, building or street...";
+    autocomplete.style.width = "100%";
+    autocomplete.style.height = "48px";
+    autocompleteElementRef.current = autocomplete;
+    host.appendChild(autocomplete);
+
+    const handleSelect = async (event) => {
       try {
-        const res =
-          await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-
-        const data =
-          await res.json();
-
-        return (
-          data?.display_name ||
-          data?.name ||
-          `${lat}, ${lng}`
-        );
-      } catch (
-        err
-      ) {
-        console.error(
-          "Geocoding error:",
-          err
-        );
-
-        return `${lat}, ${lng}`;
+        setSearching(true);
+        const prediction = event.placePrediction;
+        if (!prediction) return;
+        const place = prediction.toPlace();
+        await place.fetchFields({ fields: ["displayName", "formattedAddress", "location"] });
+        if (!place.location) return;
+        const coords = { lat: place.location.lat(), lng: place.location.lng() };
+        const address = place.formattedAddress || place.displayName || `${coords.lat}, ${coords.lng}`;
+        setSelectedAddress(address);
+        setSearchValue(address);
+        movePin(coords, 17, false);
+      } catch (error) {
+        console.error("Place search failed:", error);
+        setMapError("Unable to open that search result. Please try another location.");
+      } finally {
+        setSearching(false);
       }
     };
 
-  /* =======================================================
-     MAP CLICK
-  ======================================================= */
+    autocomplete.addEventListener("gmp-select", handleSelect);
+    return () => {
+      autocomplete.removeEventListener("gmp-select", handleSelect);
+      if (host.contains(autocomplete)) host.removeChild(autocomplete);
+      autocompleteElementRef.current = null;
+    };
+  }, [googleMapsLoaded, mapType]);
 
-  useMapEvents({
-    async click(
-      event
-    ) {
-      const {
-        lat,
-        lng,
-      } =
-        event.latlng;
+  useEffect(() => {
+    if (!googleMapsLoaded || !mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
 
-      setPosition({
-        lat,
-        lng,
+    if (!advancedMarkerRef.current) {
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
+        map: mapRef.current,
+        position: markerPosition,
+        gmpDraggable: true,
+        title: mapType === "pickup" ? "Home location" : "School location",
       });
-
-      const address =
-        await getAddress(
-          lat,
-          lng
-        );
-
-      onSelect({
-        address,
-        lat,
-        lng,
+      marker.addListener("dragend", () => {
+        const position = marker.position;
+        if (!position) return;
+        const lat = typeof position.lat === "function" ? position.lat() : Number(position.lat);
+        const lng = typeof position.lng === "function" ? position.lng() : Number(position.lng);
+        movePin({ lat, lng }, mapRef.current?.getZoom() || 17, true);
       });
-    },
-  });
+      advancedMarkerRef.current = marker;
+    } else {
+      advancedMarkerRef.current.map = mapRef.current;
+      advancedMarkerRef.current.position = markerPosition;
+    }
+  }, [googleMapsLoaded, markerPosition, mapType]);
 
-  return position ? (
-    <Marker
-      position={
-        position
-      }
-    />
-  ) : null;
+  useEffect(() => () => {
+    if (advancedMarkerRef.current) {
+      advancedMarkerRef.current.map = null;
+      advancedMarkerRef.current = null;
+    }
+  }, []);
+
+  const handleMapClick = (event) => {
+    if (!event.latLng) return;
+    movePin({ lat: event.latLng.lat(), lng: event.latLng.lng() }, mapRef.current?.getZoom() || 17, true);
+  };
+
+  const handleCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setMapError("Location access is not available on this device.");
+      return;
+    }
+    setMapError("");
+    setLocatingUser(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        movePin({ lat: position.coords.latitude, lng: position.coords.longitude }, 17, true);
+        setLocatingUser(false);
+      },
+      (error) => {
+        console.warn("Current location failed:", error);
+        setLocatingUser(false);
+        setMapError("Unable to access your current location. Please allow location permission and try again.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+    );
+  };
+
+  const handleConfirm = () => {
+    if (!hasValidCoords(markerPosition) || !selectedAddress.trim()) return;
+    onConfirm({ address: selectedAddress.trim(), lat: Number(markerPosition.lat), lng: Number(markerPosition.lng) });
+  };
+
+  const isPickup = mapType === "pickup";
+  const locationLabel = isPickup ? "Home Location" : "School Location";
+
+  return (
+    <div className="fixed inset-0 z-[200] flex flex-col bg-[#FFF9EE]">
+      <div className="relative z-30 border-b border-[#E9D7A0] bg-[#FFF9EE]/95 px-4 pb-3 pt-[max(16px,env(safe-area-inset-top))] shadow-sm backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[500px] flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-[#E9D7A0] bg-white text-black shadow-sm transition active:scale-95">
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#B97E00]">Pinpoint Location</span>
+              <h2 className="text-[16px] font-extrabold text-black">{isPickup ? "Select Home Address" : "Select School Address"}</h2>
+            </div>
+            <button type="button" onClick={handleCurrentLocation} className="flex h-11 items-center gap-2 rounded-[15px] border border-[#E9D7A0] bg-white px-3 text-[11px] font-bold text-black shadow-sm active:scale-95">
+              <MapPin size={16} className="text-[#C58800]" />
+              My Location
+            </button>
+          </div>
+
+          {googleMapsLoaded && window.google?.maps?.places?.PlaceAutocompleteElement ? (
+            <div className="relative w-full rounded-[16px] border border-[#E9D7A0] bg-white px-2 py-1 shadow-sm">
+              <div ref={autocompleteHostRef} className="w-full" />
+              {searching && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-[#C58800]" />}
+            </div>
+          ) : googleMapsLoaded ? (
+            <div className="flex h-[48px] items-center rounded-[16px] border border-[#E9D7A0] bg-white px-3.5 text-xs text-zinc-500 shadow-sm">
+              <Search size={18} className="mr-2 text-[#C58800]" />
+              Search is unavailable. You can still tap the map to choose a location.
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="relative min-h-0 flex-1 w-full bg-[#E5E3DF]">
+        {!GOOGLE_MAPS_API_KEY ? (
+          <div className="flex h-full items-center justify-center p-6 text-center">
+            <div className="max-w-sm rounded-[20px] border border-amber-200 bg-white p-6 shadow-sm">
+              <AlertTriangle className="mx-auto mb-2 text-amber-500" size={32} />
+              <p className="text-sm font-bold text-black">Google Maps API key missing</p>
+              <p className="mt-1 text-xs text-zinc-500">Configure VITE_GOOGLE_MAPS_API_KEY and rebuild the app.</p>
+            </div>
+          </div>
+        ) : googleMapsLoadError ? (
+          <div className="flex h-full items-center justify-center p-6 text-center">
+            <div className="max-w-sm rounded-[20px] border border-red-200 bg-white p-6 shadow-sm">
+              <AlertTriangle className="mx-auto mb-2 text-red-500" size={32} />
+              <p className="text-sm font-bold text-black">Google Maps could not load</p>
+              <p className="mt-1 text-xs text-zinc-500">Check billing, API restrictions and allowed website referrers for this key.</p>
+            </div>
+          </div>
+        ) : !googleMapsLoaded ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="flex items-center gap-3 rounded-2xl border border-[#E9D7A0] bg-white px-5 py-4 shadow-md">
+              <Loader2 size={22} className="animate-spin text-[#C58800]" />
+              <span className="text-xs font-bold text-black">Loading map...</span>
+            </div>
+          </div>
+        ) : (
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={16}
+            onLoad={(map) => { mapRef.current = map; map.panTo(markerPosition); }}
+            onUnmount={() => {
+              if (advancedMarkerRef.current) advancedMarkerRef.current.map = null;
+              mapRef.current = null;
+            }}
+            onClick={handleMapClick}
+            options={{
+              mapId: "DEMO_MAP_ID",
+              disableDefaultUI: true,
+              zoomControl: true,
+              clickableIcons: false,
+              gestureHandling: "greedy",
+              streetViewControl: false,
+              mapTypeControl: false,
+              fullscreenControl: false,
+            }}
+          />
+        )}
+
+        {locatingUser && (
+          <div className="absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#E9D7A0] bg-white/95 px-4 py-2 shadow-md backdrop-blur-sm">
+            <Loader2 size={14} className="animate-spin text-[#C58800]" />
+            <span className="text-[11px] font-semibold text-black">Locating you...</span>
+          </div>
+        )}
+      </div>
+
+      <div className="relative z-30 border-t border-[#E9D7A0] bg-white px-4 pb-[max(18px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-8px_25px_rgba(0,0,0,0.06)]">
+        <div className="mx-auto w-full max-w-[500px]">
+          {mapError && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700">{mapError}</div>}
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#FFEAAE] text-[#C58800]"><MapPin size={22} /></div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#B97E00]">{locationLabel}</span>
+              {geocoding ? (
+                <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-zinc-500"><Loader2 size={13} className="animate-spin text-[#C58800]" /><span>Fetching address...</span></div>
+              ) : (
+                <p className="mt-1 line-clamp-2 text-[13px] font-bold leading-tight text-black">{selectedAddress || "Tap the map or search to place the pin"}</p>
+              )}
+              {hasValidCoords(markerPosition) && <p className="mt-0.5 text-[10px] font-medium text-zinc-400">{Number(markerPosition.lat).toFixed(5)}, {Number(markerPosition.lng).toFixed(5)}</p>}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={!selectedAddress.trim() || geocoding || !hasValidCoords(markerPosition)}
+            onClick={handleConfirm}
+            className="mt-3.5 flex h-[52px] w-full items-center justify-between rounded-[16px] bg-[#FFB400] px-4 font-extrabold text-black shadow-md transition active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
+          >
+            <div className="text-left">
+              <p className="text-[13px] font-extrabold">Confirm {isPickup ? "Home" : "School"} Location</p>
+              <p className="text-[8px] font-semibold text-black/60">Save this address to child profile</p>
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-black text-white"><Check size={16} /></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-/* =========================================================
-   MAIN
-========================================================= */
 
 function Children({
   setTab,
@@ -227,6 +436,14 @@ function Children({
     setFetching,
   ] =
     useState(true);
+
+  const [
+    locationRequestType,
+    setLocationRequestType,
+  ] = useState("");
+  const [locationReason, setLocationReason] = useState("");
+  const [locationRequestLoading, setLocationRequestLoading] = useState(false);
+  const [approvedLocationRequest, setApprovedLocationRequest] = useState(null);
 
   /* =======================================================
      APP DIALOG STATE
@@ -520,6 +737,8 @@ function Children({
     (
       child
     ) => {
+      setLocationRequestType("");
+      setApprovedLocationRequest(null);
       setEditingChild(
         child
       );
@@ -613,6 +832,99 @@ function Children({
       );
     };
 
+  const beginLocationChange = async (locationType) => {
+    if (!editingChild?._id) return;
+    try {
+      const response = await API.get(`/child-location-changes/children/${editingChild._id}`);
+      const requests = response.data?.data || [];
+      const approved = requests.find((item) => item.locationType === locationType && item.status === "approved");
+      if (approved) {
+        setApprovedLocationRequest(approved);
+        setMapType(locationType === "home" ? "pickup" : "drop");
+        return;
+      }
+      const pending = requests.find((item) => item.locationType === locationType && ["pending", "awaiting_payment"].includes(item.status));
+      if (pending) {
+        if (pending.status === "awaiting_payment") {
+          const orderResponse = await API.post(`/child-location-changes/${pending._id}/order`);
+          await checkoutLocationAdjustment(pending, orderResponse.data?.data);
+          return;
+        }
+        showMessage({ title: "Request in progress", message: pending.status === "pending" ? "Your request will be processed by the end of the day, and an agent will call to confirm the location change." : "Complete the location price adjustment before starting another request." });
+        return;
+      }
+      setLocationRequestType(locationType);
+      setLocationReason("");
+    } catch (error) {
+      showMessage({ title: "Unable to check request", type: "error", message: error.response?.data?.message || "Please try again in a moment." });
+    }
+  };
+
+  const submitLocationChangeReason = async () => {
+    if (!editingChild?._id || locationReason.trim().length < 5) {
+      showMessage({ title: "Add a reason", type: "warning", message: "Please explain why this location needs to change (at least 5 characters)." });
+      return;
+    }
+    setLocationRequestLoading(true);
+    try {
+      const response = await API.post(`/child-location-changes/children/${editingChild._id}`, { locationType: locationRequestType, reason: locationReason.trim() });
+      setLocationRequestType("");
+      setLocationReason("");
+      showMessage({ title: "Request sent", type: "success", message: response.data?.message || "Your request will be processed by the end of the day, and an agent will call to confirm the location change." });
+    } catch (error) {
+      showMessage({ title: "Request not sent", type: "error", message: error.response?.data?.message || "Please try again later." });
+    } finally {
+      setLocationRequestLoading(false);
+    }
+  };
+
+  const checkoutLocationAdjustment = async (request, order) => {
+    if (!order?.keyId || !order?.order_id) throw new Error("Payment checkout is unavailable right now.");
+    if (!window.Razorpay) await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Payment checkout could not be loaded."));
+      document.body.appendChild(script);
+    });
+    const dueNow = (Number(order.amount) / 100).toFixed(2);
+    const nextMonthlyPrice = Number(request.newMonthlyPrice || 0).toFixed(2);
+    const checkout = new window.Razorpay({ key: order.keyId, amount: order.amount, currency: order.currency, order_id: order.order_id, name: "ASAN RIDES", description: `One-time route adjustment ₹${dueNow}; new monthly price ₹${nextMonthlyPrice}`, handler: async (payment) => {
+      try {
+        await API.post(`/child-location-changes/${request._id}/verify`, payment);
+        setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
+        await fetchChildren();
+        showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
+      } catch (error) { showMessage({ title: "Payment verification pending", type: "error", message: error.response?.data?.message || "The payment could not be verified yet. Check the payment status before trying again." }); }
+    }, modal: { ondismiss: () => showMessage({ title: "Payment not completed", message: "Your new location has not been applied. Reopen this location request to complete the price adjustment." }) } });
+    checkout.on("payment.failed", (event) => showMessage({ title: "Payment failed", type: "error", message: event.error?.description || "The route price adjustment was not paid. Your current location remains active." }));
+    checkout.open();
+  };
+
+  const confirmApprovedLocation = async (data) => {
+    const request = approvedLocationRequest;
+    if (!request?._id) return;
+    setLocationRequestLoading(true);
+    try {
+      const response = await API.post(`/child-location-changes/${request._id}/location`, { address: data.address, lat: data.lat, lng: data.lng });
+      const result = response.data?.data || {};
+      setMapType(null);
+      setApprovedLocationRequest(null);
+      if (result.amountDue > 0) {
+        const orderResponse = await API.post(`/child-location-changes/${request._id}/order`);
+        await checkoutLocationAdjustment({ ...request, childId: editingChild._id, locationType: request.locationType, proposedAddress: data.address, proposedCoordinates: { lat: data.lat, lng: data.lng }, newMonthlyPrice: result.newMonthlyPrice }, orderResponse.data?.data);
+        return;
+      }
+      setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: data.address, [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: { lat: data.lat, lng: data.lng } }));
+      await fetchChildren();
+      showMessage({ title: "Location updated", type: "success", message: result.message || "The approved location has been updated." });
+    } catch (error) {
+      showMessage({ title: "Location not updated", type: "error", message: error.response?.data?.message || error.message || "Please try again later." });
+    } finally {
+      setLocationRequestLoading(false);
+    }
+  };
+
   /* =======================================================
      CLOSE FORM
   ======================================================= */
@@ -628,6 +940,9 @@ function Children({
       setShowForm(
         false
       );
+
+      setLocationRequestType("");
+      setApprovedLocationRequest(null);
 
       setEditingChild(
         null
@@ -669,6 +984,17 @@ function Children({
 
   const validateForm =
     () => {
+      if (editingChild) {
+        if (!form.grade.trim()) {
+          showMessage({ type: "warning", title: "Class Required", message: "Please enter the child's class or grade." });
+          return false;
+        }
+        if (!form.pickupTime || !form.eveningPickup) {
+          showMessage({ type: "warning", title: "Pickup Times Required", message: "Please enter the home and school pickup times." });
+          return false;
+        }
+        return true;
+      }
       if (
         !form.name.trim()
       ) {
@@ -1079,10 +1405,11 @@ function Children({
         if (
           editingChild?._id
         ) {
-          const payload =
-            createPayload(
-              false
-            );
+          const payload = {
+            grade: form.grade.trim(),
+            pickupTime: form.pickupTime,
+            eveningPickup: form.eveningPickup,
+          };
 
           const res =
             await API.put(
@@ -1488,10 +1815,7 @@ function Children({
                     text-zinc-500
                   "
                 >
-                  Add school,
-                  schedule and safety
-                  information for your
-                  child.
+                  {editingChild ? "Update class and pickup times, or request a location change." : "Add school, schedule and safety information for your child."}
                 </p>
               </div>
 
@@ -1499,6 +1823,7 @@ function Children({
                   BASIC INFORMATION
               ================================================= */}
 
+              {!editingChild && <>
               <FormSectionTitle
                 title="Basic Information"
               />
@@ -1614,16 +1939,15 @@ function Children({
                   </select>
                 </CleanField>
               </div>
+              </>}
 
               {/* =================================================
                   SCHOOL INFORMATION
               ================================================= */}
 
-              <FormSectionTitle
-                title="School Information"
-              />
+              {!editingChild && <FormSectionTitle title="School Information" />}
 
-              <CleanField
+              {!editingChild && <CleanField
                 label="School"
                 icon={
                   <School
@@ -1649,15 +1973,9 @@ function Children({
                   placeholder="Enter school name"
                   className="clean-input"
                 />
-              </CleanField>
+              </CleanField>}
 
-              <div
-                className="
-                  grid
-                  grid-cols-2
-                  gap-3
-                "
-              >
+              <div className={editingChild ? "" : "grid grid-cols-2 gap-3"}>
                 <CleanField
                   label="Class / Grade"
                   icon={
@@ -1686,7 +2004,7 @@ function Children({
                   />
                 </CleanField>
 
-                <CleanField
+                {!editingChild && <CleanField
                   label="Section"
                   optional
                   icon={
@@ -1713,16 +2031,16 @@ function Children({
                     placeholder="Section"
                     className="clean-input"
                   />
-                </CleanField>
+                </CleanField>}
               </div>
+
+              {editingChild && <FormSectionTitle title="Class & Route Details" />}
 
               {/* =================================================
                   RIDE INFORMATION
               ================================================= */}
 
-              <FormSectionTitle
-                title="Ride Information"
-              />
+              <FormSectionTitle title={editingChild ? "Pickup Times & Locations" : "Ride Information"} />
 
               <FormGroupTitle
                 title="HOME"
@@ -1735,11 +2053,7 @@ function Children({
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setMapType(
-                      "pickup"
-                    )
-                  }
+                  onClick={() => editingChild ? beginLocationChange("home") : setMapType("pickup")}
                   className="
                     clean-stack-row
                   "
@@ -1784,12 +2098,11 @@ function Children({
                         }
                       `}
                     >
-                      {form.pickupLocation ||
-                        "Select pickup address"}
+                      {form.pickupLocation || "Select pickup address"}
                     </p>
                   </div>
 
-                  {form
+                  {editingChild ? <span className="rounded-full bg-[#FFF2C9] px-2.5 py-1 text-[9px] font-bold text-[#9A6900]">Request change</span> : form
                     .pickupCoords
                     ?.lat !==
                     null ? (
@@ -1879,11 +2192,7 @@ function Children({
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setMapType(
-                      "drop"
-                    )
-                  }
+                  onClick={() => editingChild ? beginLocationChange("school") : setMapType("drop")}
                   className="
                     clean-stack-row
                   "
@@ -1933,7 +2242,7 @@ function Children({
                     </p>
                   </div>
 
-                  {form
+                  {editingChild ? <span className="rounded-full bg-[#FFF2C9] px-2.5 py-1 text-[9px] font-bold text-[#9A6900]">Request change</span> : form
                     .dropoffCoords
                     ?.lat !==
                     null ? (
@@ -2016,11 +2325,11 @@ function Children({
                   SAFETY DETAILS
               ================================================= */}
 
-              <FormSectionTitle
+              {!editingChild && <FormSectionTitle
                 title="Safety Details"
-              />
+              />}
 
-              <CleanField
+              {!editingChild && <CleanField
                 label="Medical Notes"
                 optional
                 icon={
@@ -2047,9 +2356,9 @@ function Children({
                   placeholder="Medical conditions or notes"
                   className="clean-input"
                 />
-              </CleanField>
+              </CleanField>}
 
-              <CleanField
+              {!editingChild && <CleanField
                 label="Emergency Contact"
                 optional
                 icon={
@@ -2087,7 +2396,7 @@ function Children({
                   placeholder="Emergency contact number"
                   className="clean-input"
                 />
-              </CleanField>
+              </CleanField>}
 
               {/* =================================================
                   SAVE / UPDATE
@@ -2166,136 +2475,46 @@ function Children({
         ================================================= */}
 
         {mapType && (
-          <div
-            className="
-              fixed
-              inset-0
-              z-[200]
-              bg-[#FFFDF7]
-            "
-          >
-            <div
-              className="
-                absolute
-                left-4
-                right-4
-                top-4
-                z-[500]
-                flex
-                items-center
-                gap-3
-              "
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  setMapType(
-                    null
-                  )
-                }
-                className="
-                  flex
-                  h-11
-                  w-11
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-[14px]
-                  border
-                  border-[#F0E0A9]
-                  bg-white
-                  text-[#A87300]
-                  shadow-lg
-                "
-              >
-                <ArrowLeft
-                  size={22}
-                />
-              </button>
+          <GoogleLocationPicker
+            mapType={mapType}
+            initialCoords={mapType === "pickup" ? form.pickupCoords : form.dropoffCoords}
+            initialAddress={mapType === "pickup" ? form.pickupLocation : form.dropoffLocation}
+            onClose={() => setMapType(null)}
+            onConfirm={(data) => {
+              if (editingChild && approvedLocationRequest) {
+                confirmApprovedLocation(data);
+                return;
+              }
+              setForm((previous) => ({
+                ...previous,
+                [mapType === "pickup" ? "pickupLocation" : "dropoffLocation"]: data.address,
+                [mapType === "pickup" ? "pickupCoords" : "dropoffCoords"]: {
+                  lat: data.lat,
+                  lng: data.lng,
+                },
+              }));
+              setMapType(null);
+            }}
+          />
+        )}
 
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-2
-                  rounded-[14px]
-                  border
-                  border-[#EFD78A]
-                  bg-[#FFF4CA]
-                  px-4
-                  py-3
-                  text-[12px]
-                  font-semibold
-                  text-black
-                  shadow-lg
-                "
-              >
-                <MapPinned
-                  size={17}
-                  className="
-                    text-[#C78B00]
-                  "
-                />
-
-                Tap the map to select{" "}
-                {mapType ===
-                "pickup"
-                  ? "Home"
-                  : "School"}
+        {locationRequestType && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-[420px] rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Location change request</p>
+                  <h2 className="mt-1 text-[21px] font-extrabold text-black">Why change the {locationRequestType === "home" ? "home" : "school"} location?</h2>
+                </div>
+                <button type="button" onClick={() => setLocationRequestType("")} className="rounded-full p-2 text-zinc-500" aria-label="Close"><X size={18} /></button>
+              </div>
+              <p className="mb-3 text-[12px] leading-5 text-zinc-600">An agent will review your request and call to confirm the new location.</p>
+              <textarea value={locationReason} onChange={(event) => setLocationReason(event.target.value)} maxLength={1000} rows={4} placeholder="Tell us why this location needs to change..." className="w-full resize-none rounded-[15px] border border-[#E9D8B7] bg-white p-3 text-[13px] outline-none focus:border-[#E6A900]" />
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => setLocationRequestType("")} className="h-11 flex-1 rounded-[13px] border border-[#E9D8B7] font-bold text-zinc-700">Cancel</button>
+                <button type="button" disabled={locationRequestLoading || locationReason.trim().length < 5} onClick={submitLocationChangeReason} className="h-11 flex-1 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Sending..." : "Send request"}</button>
               </div>
             </div>
-
-            <MapContainer
-              center={[
-                17.385,
-                78.4867,
-              ]}
-              zoom={13}
-              className="
-                h-full
-                w-full
-              "
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              <LocationPicker
-                onSelect={(
-                  data
-                ) => {
-                  setForm(
-                    (
-                      previous
-                    ) => ({
-                      ...previous,
-
-                      [mapType ===
-                      "pickup"
-                        ? "pickupLocation"
-                        : "dropoffLocation"]:
-                        data.address,
-
-                      [mapType ===
-                      "pickup"
-                        ? "pickupCoords"
-                        : "dropoffCoords"]:
-                        {
-                          lat:
-                            data.lat,
-
-                          lng:
-                            data.lng,
-                        },
-                    })
-                  );
-
-                  setMapType(
-                    null
-                  );
-                }}
-              />
-            </MapContainer>
           </div>
         )}
 
