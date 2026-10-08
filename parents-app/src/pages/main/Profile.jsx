@@ -49,6 +49,7 @@ import {
   getParentProfile,
   updateParentProfile,
   logoutParent,
+  unlinkDriver,
 } from "../../api/parentApi";
 
 /* =========================================================
@@ -1877,21 +1878,25 @@ function Profile({
      DRIVER STATUS
   ======================================================= */
 
-  const driverLinked =
-    Boolean(
-      user?.driverId
-    );
+  const savedDriverIds = [...new Set([...(Array.isArray(user?.driverIds) ? user.driverIds : []), user?.driverId].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean))];
+  const driverLinked = savedDriverIds.length > 0;
 
   const handleDriverClick =
     () => {
-      if (driverLinked) {
-        return;
-      }
-
       navigate(
         "/link-driver"
       );
     };
+
+  const handleRemoveDriver = async (driverId) => {
+    if (!window.confirm(`Remove ${driverId} from your saved driver IDs?`)) return;
+    try {
+      const result = await unlinkDriver(driverId);
+      if (result?.data) applyParentProfile(result.data);
+    } catch (err) {
+      alert(err?.response?.data?.message || "Unable to remove this driver ID.");
+    }
+  };
 
   /* =======================================================
      UI
@@ -2049,81 +2054,23 @@ function Profile({
 
                   {/* DRIVER STATUS */}
 
-                  <button
-                    type="button"
-                    onClick={
-                      handleDriverClick
-                    }
-                    className={`
-                      mt-4 flex w-full items-center justify-between
-                      rounded-[17px] border px-4 py-3 text-left
-                      ${
-                        driverLinked
-                          ? "border-green-100 bg-green-50"
-                          : "border-[#EFD994] bg-[#FFF9EA]"
-                      }
-                    `}
-                  >
-
-                    <div className="flex items-center gap-3">
-
-                      <div
-                        className={`
-                          flex h-10 w-10 shrink-0 items-center
-                          justify-center rounded-[12px]
-                          ${
-                            driverLinked
-                              ? "bg-green-100 text-green-600"
-                              : "bg-[#FFF0B6] text-black"
-                          }
-                        `}
-                      >
-
-                        {driverLinked ? (
-                          <CheckCircle2
-                            size={19}
-                          />
-                        ) : (
-                          <Link2
-                            size={19}
-                          />
-                        )}
-
+                  <div className={`mt-4 rounded-[17px] border px-4 py-3 ${driverLinked ? "border-green-100 bg-green-50" : "border-[#EFD994] bg-[#FFF9EA]"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${driverLinked ? "bg-green-100 text-green-600" : "bg-[#FFF0B6] text-black"}`}>
+                          {driverLinked ? <CheckCircle2 size={19}/> : <Link2 size={19}/>}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[9px] text-zinc-400">Saved driver ASAN IDs</p>
+                          <p className="mt-[2px] text-[12px] font-bold text-black">{savedDriverIds.length ? `${savedDriverIds.length} ${savedDriverIds.length === 1 ? "driver" : "drivers"} saved` : "No drivers saved yet"}</p>
+                        </div>
                       </div>
-
-                      <div>
-
-                        <p className="text-[9px] text-zinc-400">
-                          Driver connection
-                        </p>
-
-                        <p className="mt-[2px] text-[12px] font-bold text-black">
-                          {driverLinked
-                            ? user.driverId
-                            : "No driver linked"}
-                        </p>
-
-                      </div>
-
+                      <button type="button" onClick={handleDriverClick} className="shrink-0 rounded-full bg-[#FFF0B8] px-3 py-2 text-[8px] font-bold text-[#936400]">
+                        {driverLinked ? "ADD DRIVER" : "ADD ID"}
+                      </button>
                     </div>
-
-                    <span
-                      className={`
-                        rounded-full px-2.5 py-1.5
-                        text-[8px] font-bold
-                        ${
-                          driverLinked
-                            ? "bg-green-100 text-green-700"
-                            : "bg-[#FFF0B8] text-[#936400]"
-                        }
-                      `}
-                    >
-                      {driverLinked
-                        ? "LINKED"
-                        : "SELECT"}
-                    </span>
-
-                  </button>
+                    {savedDriverIds.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{savedDriverIds.map((id) => <span key={id} className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-white py-1 pl-3 pr-1 text-[9px] font-bold text-zinc-700">{id}<button type="button" onClick={() => handleRemoveDriver(id)} aria-label={`Remove ${id}`} className="rounded-full p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"><X size={12}/></button></span>)}</div>}
+                  </div>
                 </>
               )}
 
@@ -2469,7 +2416,7 @@ function Profile({
               </div>
 
               <FormField
-                label="Driver ID"
+                label="Saved Driver ASAN IDs"
                 icon={
                   <IdCard
                     size={18}
@@ -2477,21 +2424,13 @@ function Profile({
                 }
                 hint={
                   driverLinked
-                    ? "Driver assignments cannot be edited from profile."
-                    : "No driver is currently linked. Use Driver Connection from your profile to select or request a driver."
+                    ? "Choose any saved driver when sending a booking request. Add more IDs from your profile card."
+                    : "Add a driver ASAN ID from your profile card to use it for bookings."
                 }
               >
-
-                <input
-                  type="text"
-                  value={
-                    user?.driverId ||
-                    "No driver linked"
-                  }
-                  disabled
-                  className="profile-input cursor-not-allowed bg-[#F8F7F3] text-zinc-500"
-                />
-
+                <div className="profile-input min-h-[52px] bg-[#F8F7F3] text-zinc-600">
+                  {savedDriverIds.length ? savedDriverIds.join(", ") : "No driver ASAN IDs saved"}
+                </div>
               </FormField>
 
               <button

@@ -52,6 +52,14 @@ export const linkDriver =
     return response.data;
   };
 
+export const unlinkDriver =
+  async (driverId) => {
+    const response = await API.delete(
+      `/parent/link-driver/${encodeURIComponent(driverId)}`
+    );
+    return response.data;
+  };
+
 /* =========================================================
    SAVE PARENT FCM TOKEN
 ========================================================= */
