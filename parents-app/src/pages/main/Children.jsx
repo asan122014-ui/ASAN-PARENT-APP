@@ -1758,12 +1758,8 @@ function Children({
                   TITLE
               ================================================= */}
 
-              <div
-                className="
-                  mb-7
-                "
-              >
-                <div
+              <div className={editingChild ? "mb-5" : "mb-7"}>
+                {!editingChild && <div
                   className="
                     mb-2
                     flex
@@ -1783,7 +1779,7 @@ function Children({
                     Child Profile
                   </span>
 
-                  <div
+                    <div
                     className="
                       h-[3px]
                       w-7
@@ -1791,7 +1787,7 @@ function Children({
                       bg-[#FFB000]
                     "
                   />
-                </div>
+                </div>}
 
                 <h1
                   className="
@@ -1808,14 +1804,16 @@ function Children({
 
                 <p
                   className="
-                    mt-2
+                    mt-1.5
                     max-w-[330px]
-                    text-[11px]
+                    text-[12px]
                     leading-5
                     text-zinc-500
                   "
                 >
-                  {editingChild ? "Update class and pickup times, or request a location change." : "Add school, schedule and safety information for your child."}
+                  {editingChild
+                    ? "Update class and pickup times. Request approval for location changes."
+                    : "Add school, schedule and safety information for your child."}
                 </p>
               </div>
 
@@ -2034,13 +2032,11 @@ function Children({
                 </CleanField>}
               </div>
 
-              {editingChild && <FormSectionTitle title="Class & Route Details" />}
-
               {/* =================================================
                   RIDE INFORMATION
               ================================================= */}
 
-              <FormSectionTitle title={editingChild ? "Pickup Times & Locations" : "Ride Information"} />
+              <FormSectionTitle title={editingChild ? "Pickup Schedule & Locations" : "Ride Information"} />
 
               <FormGroupTitle
                 title="HOME"
