@@ -135,12 +135,12 @@ function BookRide() {
           </div>
         </div>
       </div>
-      {step === 1 && <form onSubmit={getQuote} className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title={"Children (" + children.length + ")"} />
+      {step === 1 && <form onSubmit={getQuote} className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="My Children" />
         <p className="-mt-2 mb-4 text-[10px] leading-4 text-zinc-500">Add every child who will use this shared monthly route. The price updates for the total number of children.</p>
         <div className="space-y-3">
           {children.map((item, index) => <div key={index} className="rounded-[18px] border border-[#EFE4D0] bg-[#FFFDF8] p-3">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[10px] font-extrabold uppercase tracking-[1px] text-[#9A6A00]">Child {index + 1}</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-[1px] text-[#9A6A00]">Child details</p>
               {children.length > 1 && <button type="button" onClick={() => setChildren((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold text-[#8D4B43]" aria-label={"Remove child " + (index + 1)}><Trash2 size={12} /> Remove</button>}
             </div>
             <div className="grid grid-cols-2 gap-3">
