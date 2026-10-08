@@ -909,6 +909,7 @@ const Billing = () => {
                       currentInvoice.month
                     ),
                 }}
+                onPaymentVerified={fetchInvoices}
               />
             </motion.section>
           )}
@@ -1105,6 +1106,7 @@ const Billing = () => {
                             invoice.month
                           ),
                       }}
+                      onPaymentVerified={fetchInvoices}
                     />
                   )
                 )}
