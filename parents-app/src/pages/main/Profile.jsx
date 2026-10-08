@@ -49,7 +49,6 @@ import {
   getParentProfile,
   updateParentProfile,
   logoutParent,
-  unlinkDriver,
 } from "../../api/parentApi";
 
 /* =========================================================
@@ -1881,22 +1880,7 @@ function Profile({
   const savedDriverIds = [...new Set([...(Array.isArray(user?.driverIds) ? user.driverIds : []), user?.driverId].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean))];
   const driverLinked = savedDriverIds.length > 0;
 
-  const handleDriverClick =
-    () => {
-      navigate(
-        "/link-driver"
-      );
-    };
 
-  const handleRemoveDriver = async (driverId) => {
-    if (!window.confirm(`Remove ${driverId} from your saved driver IDs?`)) return;
-    try {
-      const result = await unlinkDriver(driverId);
-      if (result?.data) applyParentProfile(result.data);
-    } catch (err) {
-      alert(err?.response?.data?.message || "Unable to remove this driver ID.");
-    }
-  };
 
   /* =======================================================
      UI
@@ -2065,11 +2049,8 @@ function Profile({
                           <p className="mt-[2px] text-[12px] font-bold text-black">{savedDriverIds.length ? `${savedDriverIds.length} ${savedDriverIds.length === 1 ? "driver" : "drivers"} saved` : "No drivers saved yet"}</p>
                         </div>
                       </div>
-                      <button type="button" onClick={handleDriverClick} className="shrink-0 rounded-full bg-[#FFF0B8] px-3 py-2 text-[8px] font-bold text-[#936400]">
-                        {driverLinked ? "ADD DRIVER" : "ADD ID"}
-                      </button>
                     </div>
-                    {savedDriverIds.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{savedDriverIds.map((id) => <span key={id} className="inline-flex items-center gap-1 rounded-full border border-green-100 bg-white py-1 pl-3 pr-1 text-[9px] font-bold text-zinc-700">{id}<button type="button" onClick={() => handleRemoveDriver(id)} aria-label={`Remove ${id}`} className="rounded-full p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"><X size={12}/></button></span>)}</div>}
+                    {savedDriverIds.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{savedDriverIds.map((id) => <span key={id} className="inline-flex items-center rounded-full border border-green-100 bg-white px-3 py-1 text-[9px] font-bold text-zinc-700">{id}</span>)}</div>}
                   </div>
                 </>
               )}
