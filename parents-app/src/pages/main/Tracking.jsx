@@ -421,7 +421,10 @@ const [
   }
 
   const driverId =
-    parent?.driverId;
+    localStorage.getItem("selectedTrackingDriverId") ||
+    (typeof parent?.driverId === "object"
+      ? parent.driverId?.driverId || parent.driverId?._id
+      : parent?.driverId);
 
   const parentId =
     parent?._id;

@@ -1300,6 +1300,26 @@ function Home({
 
     );
 
+  const rideGroups = useMemo(() => {
+    const groups = new Map();
+    sortedTrips
+      .filter((trip) => isRideActive(trip.uiStatus || trip.status))
+      .forEach((trip) => {
+        const driver = trip.driver || trip.assignedDriver || {};
+        const driverId = String(
+          driver.driverId || trip.driverId || trip.assignedDriverId || parent?.driverId || ""
+        ).trim();
+        if (!driverId) return;
+        if (!groups.has(driverId)) groups.set(driverId, { driverId, trips: [], children: new Map() });
+        const group = groups.get(driverId);
+        group.trips.push(trip);
+        const child = typeof trip.child === "object" ? trip.child : null;
+        const childId = String(child?._id || trip.child?._id || trip.child || trip.childName || trip._id);
+        if (!group.children.has(childId)) group.children.set(childId, { trip, child });
+      });
+    return Array.from(groups.values());
+  }, [sortedTrips, parent?.driverId]);
+
 
 
   /* =======================================================
@@ -2522,7 +2542,7 @@ function Home({
 
               >
 
-                Current Ride
+                Family Rides
 
               </h2>
 
@@ -2558,6 +2578,57 @@ function Home({
 
 
 
+          {rideGroups.length > 0 ? (
+            <div className="space-y-3">
+              {rideGroups.map((group) => {
+                const children = Array.from(group.children.values());
+                const liveCount = group.trips.filter((trip) => getRideStage(trip) > 0 && getRideStage(trip) < 3).length;
+                return (
+                  <motion.button
+                    key={group.driverId}
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem("selectedTrackingDriverId", group.driverId);
+                      setTab("tracking");
+                    }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="relative w-full overflow-hidden rounded-[25px] border border-[#EFCF70] bg-white p-4 text-left shadow-[0_14px_34px_rgba(97,74,12,0.08)]"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-1 bg-[#FFB400]" />
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[#FFF1C8] text-[#A87500]"><Route size={20} /></span>
+                        <div className="min-w-0">
+                          <p className="text-[8px] font-extrabold uppercase tracking-[1.3px] text-[#B77D00]">{liveCount ? "Live ride" : "Ride status"}</p>
+                          <p className="mt-1 truncate text-[14px] font-extrabold text-black">Driver {group.driverId}</p>
+                        </div>
+                      </div>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF8E6] text-[#9A6900]"><ChevronRight size={18} /></span>
+                    </div>
+                    <div className="mt-4 space-y-2 border-t border-[#F0E8D2] pt-3">
+                      {children.map(({ trip, child }, index) => {
+                        const stage = getRideStage(trip);
+                        const status = stage === 3 ? "Reached" : stage === 2 ? "Picked up" : stage === 1 ? "On the way" : "Waiting for pickup";
+                        const name = child?.name || trip.childName || `Child ${index + 1}`;
+                        return (
+                          <div key={String(child?._id || trip.child || trip._id)} className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FFF1C8] text-[9px] font-extrabold text-[#9A6900]">{index + 1}</span>
+                              <span className="truncate text-[11px] font-bold text-black">{name}</span>
+                            </div>
+                            <span className="shrink-0 text-[9px] font-semibold text-zinc-500">{status}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-3 text-[9px] font-semibold text-[#8A6100]">View this driver’s live route</p>
+                  </motion.button>
+                );
+              })}
+            </div>
+          ) : (
           <motion.button
 
             type="button"
@@ -3887,6 +3958,7 @@ function Home({
             </div>
 
           </motion.button>
+          )}
 
           <CurrentBookings />
 
@@ -4635,6 +4707,8 @@ function isRideActive(
 
 
   return [
+
+    "waiting",
 
     "pending",
 
