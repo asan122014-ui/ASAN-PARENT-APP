@@ -16,6 +16,8 @@ import {
 
 const SummaryCard = ({
   invoices = [],
+  paidBookings = [],
+  pendingBookings = [],
   className = "",
 }) => {
   /* =======================================================
@@ -39,9 +41,11 @@ const SummaryCard = ({
       (
         invoice
       ) =>
-        invoice.status ===
-        "Pending"
+        ["Pending", "Overdue"].includes(invoice.status)
     );
+
+  const bookingPaidAmount = paidBookings.reduce((sum, booking) => sum + Number(booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0), 0);
+  const bookingPendingAmount = pendingBookings.reduce((sum, booking) => sum + Number(booking.quote?.totalMonthly ?? 0), 0);
 
   const totalPaidAmount =
     paidInvoices.reduce(
@@ -55,7 +59,7 @@ const SummaryCard = ({
             0
         ),
 
-      0
+      bookingPaidAmount
     );
 
   const totalPendingAmount =
@@ -70,7 +74,7 @@ const SummaryCard = ({
             0
         ),
 
-      0
+      bookingPendingAmount
     );
 
   const totalAmount =
@@ -85,7 +89,7 @@ const SummaryCard = ({
             0
         ),
 
-      0
+      bookingPaidAmount + bookingPendingAmount
     );
 
   /* =======================================================
@@ -157,12 +161,7 @@ const SummaryCard = ({
         CheckCircle2,
 
       subText:
-        `${paidInvoices.length} Paid ${
-          paidInvoices.length ===
-          1
-            ? "Invoice"
-            : "Invoices"
-        }`,
+        `${paidInvoices.length} invoice${paidInvoices.length === 1 ? "" : "s"} · ${paidBookings.length} ride${paidBookings.length === 1 ? "" : "s"}`,
 
       variant:
         "paid",
@@ -184,12 +183,7 @@ const SummaryCard = ({
         Clock3,
 
       subText:
-        `${pendingInvoices.length} Pending ${
-          pendingInvoices.length ===
-          1
-            ? "Invoice"
-            : "Invoices"
-        }`,
+        `${pendingInvoices.length} invoice${pendingInvoices.length === 1 ? "" : "s"} · ${pendingBookings.length} ride${pendingBookings.length === 1 ? "" : "s"}`,
 
       variant:
         "pending",

@@ -43,6 +43,7 @@ const Billing = () => {
     useState([]);
 
   const [paidBookings, setPaidBookings] = useState([]);
+  const [pendingBookings, setPendingBookings] = useState([]);
 
   const [
     loading,
@@ -101,6 +102,7 @@ const Billing = () => {
             []
           );
           setPaidBookings([]);
+          setPendingBookings([]);
 
           setError(
             "Parent details not found."
@@ -150,11 +152,15 @@ const Billing = () => {
 
         try {
           const bookingResponse = await API.get("/bookings/mine");
-          const paid = (bookingResponse.data?.data || []).filter((booking) => booking.paymentId?.status === "PAID");
+          const bookingRows = bookingResponse.data?.data || [];
+          const paid = bookingRows.filter((booking) => booking.paymentId?.status === "PAID");
+          const pending = bookingRows.filter((booking) => booking.status === "awaiting_payment" && booking.paymentId?.status !== "PAID");
           setPaidBookings(paid);
+          setPendingBookings(pending);
         } catch (bookingError) {
           console.error("Paid ride payments error:", bookingError?.response?.data || bookingError);
           setPaidBookings([]);
+          setPendingBookings([]);
         }
       } catch (
         err
@@ -171,6 +177,7 @@ const Billing = () => {
           []
         );
         setPaidBookings([]);
+        setPendingBookings([]);
 
         setError(
           err?.response
@@ -817,6 +824,8 @@ const Billing = () => {
             invoices={
               normalizedInvoices
             }
+            paidBookings={paidBookings}
+            pendingBookings={pendingBookings}
           />
 
           {/* =================================================
