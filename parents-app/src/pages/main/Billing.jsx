@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   WalletCards,
+  Download,
 } from "lucide-react";
 
 import {
@@ -26,6 +27,7 @@ import {
   getParentInvoices,
 } from "../../api/invoiceApi";
 import { API } from "../../api/api";
+import { downloadPaidRideInvoice } from "../../utils/paidRideInvoice";
 
 /* =========================================================
    BILLING
@@ -960,7 +962,12 @@ const Billing = () => {
                           <p className="mt-1 text-[8px] font-bold text-green-700">PAID</p>
                         </div>
                       </div>
-                      <div className="mt-3 border-t border-green-50 pt-2 text-[9px] text-zinc-500">Receipt ID: {booking.paymentId?.paymentId || booking._id.slice(-8).toUpperCase()}</div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-green-50 pt-2">
+                        <p className="text-[9px] text-zinc-500">Receipt ID: {booking.paymentId?.paymentId || booking._id.slice(-8).toUpperCase()}</p>
+                        <button type="button" onClick={() => { const parent = JSON.parse(localStorage.getItem("parent") || "{}"); downloadPaidRideInvoice(booking, parent); }} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[#EBDCA9] bg-[#FFF9EE] px-3 text-[9px] font-extrabold text-[#8A6100] transition hover:bg-[#FFF0C2]">
+                          <Download size={13}/> Download invoice
+                        </button>
+                      </div>
                     </article>
                   );
                 })}
