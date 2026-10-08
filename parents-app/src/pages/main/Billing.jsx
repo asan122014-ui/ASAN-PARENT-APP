@@ -25,6 +25,7 @@ import EmptyInvoice from "../../components/billing/EmptyInvoice";
 import {
   getParentInvoices,
 } from "../../api/invoiceApi";
+import { API } from "../../api/api";
 
 /* =========================================================
    BILLING
@@ -40,6 +41,8 @@ const Billing = () => {
     setInvoices,
   ] =
     useState([]);
+
+  const [paidBookings, setPaidBookings] = useState([]);
 
   const [
     loading,
@@ -97,6 +100,7 @@ const Billing = () => {
           setInvoices(
             []
           );
+          setPaidBookings([]);
 
           setError(
             "Parent details not found."
@@ -143,6 +147,15 @@ const Billing = () => {
         setInvoices(
           sorted
         );
+
+        try {
+          const bookingResponse = await API.get("/bookings/mine");
+          const paid = (bookingResponse.data?.data || []).filter((booking) => booking.paymentId?.status === "PAID");
+          setPaidBookings(paid);
+        } catch (bookingError) {
+          console.error("Paid ride payments error:", bookingError?.response?.data || bookingError);
+          setPaidBookings([]);
+        }
       } catch (
         err
       ) {
@@ -157,6 +170,7 @@ const Billing = () => {
         setInvoices(
           []
         );
+        setPaidBookings([]);
 
         setError(
           err?.response
@@ -913,6 +927,37 @@ const Billing = () => {
               />
             </motion.section>
           )}
+
+          <section className="mt-6">
+            <SectionHeader miniTitle="Payments" title="Paid ride receipts" count={paidBookings.length}/>
+            {paidBookings.length === 0 ? (
+              <div className="rounded-[18px] border border-[#EFE4D0] bg-white p-4 text-[10px] leading-4 text-zinc-500">Completed booking payments will appear here after Razorpay confirms them.</div>
+            ) : (
+              <div className="space-y-3">
+                {paidBookings.map((booking) => {
+                  const child = booking.childId || booking.child || {};
+                  const childNames = (booking.children?.length ? booking.children : [child]).map((item) => item?.name).filter(Boolean).join(", ");
+                  const paidAt = booking.paymentId?.paidAt || booking.paidAt;
+                  return (
+                    <article key={booking._id} className="rounded-[19px] border border-green-100 bg-white p-4 shadow-[0_6px_18px_rgba(45,115,74,0.04)]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[8px] font-extrabold uppercase tracking-[1.2px] text-green-700">Payment confirmed · {paidAt ? new Date(paidAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Date unavailable"}</p>
+                          <p className="mt-1 truncate text-[12px] font-extrabold text-black">{childNames || "Monthly ride service"}</p>
+                          <p className="mt-1 truncate text-[9px] text-zinc-500">{booking.route?.pickup || "Home"} → {booking.route?.dropoff || child.school || "School"}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[14px] font-extrabold text-black">₹{Number(booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="mt-1 text-[8px] font-bold text-green-700">PAID</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 border-t border-green-50 pt-2 text-[9px] text-zinc-500">Receipt ID: {booking.paymentId?.paymentId || booking._id.slice(-8).toUpperCase()}</div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
           {/* =================================================
               HISTORY
