@@ -28,6 +28,7 @@ import {
 } from "../../api/invoiceApi";
 import { API } from "../../api/api";
 import { downloadPaidRideInvoice } from "../../utils/paidRideInvoice";
+import { downloadLocationChangeInvoice } from "../../utils/paidLocationChangeInvoice";
 
 /* =========================================================
    BILLING
@@ -46,6 +47,7 @@ const Billing = () => {
 
   const [paidBookings, setPaidBookings] = useState([]);
   const [pendingBookings, setPendingBookings] = useState([]);
+  const [paidLocationChanges, setPaidLocationChanges] = useState([]);
 
   const [
     loading,
@@ -105,6 +107,7 @@ const Billing = () => {
           );
           setPaidBookings([]);
           setPendingBookings([]);
+          setPaidLocationChanges([]);
 
           setError(
             "Parent details not found."
@@ -164,6 +167,24 @@ const Billing = () => {
           setPaidBookings([]);
           setPendingBookings([]);
         }
+        try {
+          const childrenResponse = await API.get(`/children/parent/${parent._id}`);
+          const children = childrenResponse.data?.data || [];
+          const histories = await Promise.all(children.map((child) =>
+            API.get(`/child-location-changes/children/${child._id}`)
+              .then((response) => response.data?.data || [])
+              .catch((historyError) => {
+                console.error("Location change billing history error:", historyError?.response?.data || historyError);
+                return [];
+              })
+          ));
+          setPaidLocationChanges(histories.flat().filter((change) =>
+            change.status === "completed" && change.paymentId && change.paidAt && Number(change.amountDue) > 0
+          ));
+        } catch (locationError) {
+          console.error("Location change billing error:", locationError?.response?.data || locationError);
+          setPaidLocationChanges([]);
+        }
       } catch (
         err
       ) {
@@ -180,6 +201,7 @@ const Billing = () => {
         );
         setPaidBookings([]);
         setPendingBookings([]);
+        setPaidLocationChanges([]);
 
         setError(
           err?.response
@@ -347,8 +369,13 @@ const Billing = () => {
       ? paidBookings
       : [];
 
+  const historyLocationChanges =
+    filterStatus === "All" || filterStatus === "Paid"
+      ? paidLocationChanges
+      : [];
+
   const historyCount =
-    filteredInvoices.length + historyBookings.length;
+    filteredInvoices.length + historyBookings.length + historyLocationChanges.length;
 
   /* =======================================================
      CURRENT INVOICE
@@ -378,7 +405,7 @@ const Billing = () => {
   const statusCounts =
     {
       All:
-        normalizedInvoices.length + paidBookings.length,
+        normalizedInvoices.length + paidBookings.length + paidLocationChanges.length,
 
       Pending:
         normalizedInvoices.filter(
@@ -396,7 +423,7 @@ const Billing = () => {
           ) =>
             invoice.status ===
             "Paid"
-        ).length + paidBookings.length,
+        ).length + paidBookings.length + paidLocationChanges.length,
 
       Overdue:
         normalizedInvoices.filter(
@@ -658,9 +685,7 @@ const Billing = () => {
         text-zinc-500
       "
     >
-      View monthly invoices,
-      payment status and
-      transport charges.
+      View monthly invoices, location change charges and payment receipts.
     </p>
   </motion.div>
 
@@ -835,6 +860,7 @@ const Billing = () => {
               normalizedInvoices
             }
             paidBookings={paidBookings}
+            paidLocationChanges={paidLocationChanges}
             pendingBookings={pendingBookings}
           />
 
@@ -958,7 +984,7 @@ const Billing = () => {
           >
             <SectionHeader
               miniTitle="History"
-              title="Invoice History"
+              title="Invoice & Payment History"
               count={
                 historyCount
               }
@@ -1104,11 +1130,13 @@ const Billing = () => {
               <EmptyInvoice
                 title={
                   invoices.length === 0 && paidBookings.length === 0
+                    && paidLocationChanges.length === 0
                     ? "No Invoices Yet"
                     : "No Matching Invoices"
                 }
                 description={
                   invoices.length === 0 && paidBookings.length === 0
+                    && paidLocationChanges.length === 0
                     ? "Paid ride receipts and monthly transport invoices will appear here once available."
                     : `There are no ${filterStatus.toLowerCase()} invoices available right now.`
                 }
@@ -1161,6 +1189,32 @@ const Billing = () => {
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-green-50 pt-2">
                         <p className="text-[9px] text-zinc-500">Receipt ID: {booking.paymentId?.paymentId || booking._id.slice(-8).toUpperCase()}</p>
                         <button type="button" onClick={() => { const parent = JSON.parse(localStorage.getItem("parent") || "{}"); downloadPaidRideInvoice(booking, parent); }} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[#EBDCA9] bg-[#FFF9EE] px-3 text-[9px] font-extrabold text-[#8A6100] transition hover:bg-[#FFF0C2]">
+                          <Download size={13}/> Download invoice
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+                {historyLocationChanges.map((change) => {
+                  const paidAt = change.paidAt;
+                  const invoiceNumber = `ASAN-LOC-${String(change.paymentId || change._id).replace(/[^a-zA-Z0-9]/g, "").slice(-10).toUpperCase()}`;
+                  return (
+                    <article key={`location-receipt-${change._id}`} className="rounded-[19px] border border-green-100 bg-white p-4 shadow-[0_6px_18px_rgba(45,115,74,0.04)]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[8px] font-extrabold uppercase tracking-[1.2px] text-green-700">Location change paid · {paidAt ? new Date(paidAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Date unavailable"}</p>
+                          <p className="mt-1 truncate text-[12px] font-extrabold text-black">{change.childName || "Child"} · {change.locationType === "home" ? "Home pickup" : "School drop-off"}</p>
+                          <p className="mt-1 line-clamp-2 text-[9px] text-zinc-500">{change.proposedAddress || "Updated route"}</p>
+                          <p className="mt-1 text-[8px] text-zinc-500">Route: {Number(change.oldDistanceKm || 0).toFixed(2)} km → {Number(change.newDistanceKm || 0).toFixed(2)} km</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[14px] font-extrabold text-black">₹{Number(change.amountDue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="mt-1 text-[8px] font-bold text-green-700">PAID</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-green-50 pt-2">
+                        <p className="text-[9px] text-zinc-500">Invoice: {invoiceNumber} · Payment ID: {change.paymentId}</p>
+                        <button type="button" onClick={() => { const parent = JSON.parse(localStorage.getItem("parent") || "{}"); downloadLocationChangeInvoice(change, parent); }} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[#EBDCA9] bg-[#FFF9EE] px-3 text-[9px] font-extrabold text-[#8A6100] transition hover:bg-[#FFF0C2]">
                           <Download size={13}/> Download invoice
                         </button>
                       </div>

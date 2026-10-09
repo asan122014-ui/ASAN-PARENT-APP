@@ -17,6 +17,7 @@ import {
 const SummaryCard = ({
   invoices = [],
   paidBookings = [],
+  paidLocationChanges = [],
   pendingBookings = [],
   className = "",
 }) => {
@@ -45,6 +46,7 @@ const SummaryCard = ({
     );
 
   const bookingPaidAmount = paidBookings.reduce((sum, booking) => sum + Number(booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0), 0);
+  const locationChangePaidAmount = paidLocationChanges.reduce((sum, change) => sum + Number(change.amountDue || 0), 0);
   const bookingPendingAmount = pendingBookings.reduce((sum, booking) => sum + Number(booking.quote?.totalMonthly ?? 0), 0);
 
   const totalPaidAmount =
@@ -59,7 +61,7 @@ const SummaryCard = ({
             0
         ),
 
-      bookingPaidAmount
+      bookingPaidAmount + locationChangePaidAmount
     );
 
   const totalPendingAmount =
@@ -89,7 +91,7 @@ const SummaryCard = ({
             0
         ),
 
-      bookingPaidAmount + bookingPendingAmount
+      bookingPaidAmount + locationChangePaidAmount + bookingPendingAmount
     );
 
   /* =======================================================
@@ -125,20 +127,20 @@ const SummaryCard = ({
         "invoice",
 
       title:
-        "Invoices",
+        "Invoices & Receipts",
 
       value:
-        totalInvoices,
+        totalInvoices + paidBookings.length + paidLocationChanges.length,
 
       icon:
         ReceiptText,
 
       subText:
-        `${totalInvoices} ${
-          totalInvoices ===
+        `${totalInvoices + paidBookings.length + paidLocationChanges.length} ${
+          totalInvoices + paidBookings.length + paidLocationChanges.length ===
           1
-            ? "Invoice"
-            : "Invoices"
+            ? "Invoice or receipt"
+            : "Invoices and receipts"
         }`,
 
       variant:
@@ -161,7 +163,7 @@ const SummaryCard = ({
         CheckCircle2,
 
       subText:
-        `${paidInvoices.length} invoice${paidInvoices.length === 1 ? "" : "s"} · ${paidBookings.length} ride${paidBookings.length === 1 ? "" : "s"}`,
+        `${paidInvoices.length} invoice${paidInvoices.length === 1 ? "" : "s"} · ${paidBookings.length} ride${paidBookings.length === 1 ? "" : "s"} · ${paidLocationChanges.length} location change${paidLocationChanges.length === 1 ? "" : "s"}`,
 
       variant:
         "paid",
