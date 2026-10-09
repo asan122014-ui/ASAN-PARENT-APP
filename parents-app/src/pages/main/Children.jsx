@@ -444,6 +444,7 @@ function Children({
   const [locationReason, setLocationReason] = useState("");
   const [locationRequestLoading, setLocationRequestLoading] = useState(false);
   const [approvedLocationRequest, setApprovedLocationRequest] = useState(null);
+  const [locationChoiceType, setLocationChoiceType] = useState("");
 
   /* =======================================================
      APP DIALOG STATE
@@ -738,6 +739,7 @@ function Children({
       child
     ) => {
       setLocationRequestType("");
+      setLocationChoiceType("");
       setApprovedLocationRequest(null);
       setEditingChild(
         child
@@ -853,6 +855,11 @@ function Children({
         showMessage({ title: "Request in progress", message: pending.status === "pending" ? "Your request will be processed by the end of the day, and an agent will call to confirm the location change." : "Complete the location price adjustment before starting another request." });
         return;
       }
+      const completed = requests.find((item) => item.locationType === locationType && item.status === "completed");
+      if (completed) {
+        setLocationChoiceType(locationType);
+        return;
+      }
       setLocationRequestType(locationType);
       setLocationReason("");
     } catch (error) {
@@ -909,6 +916,7 @@ function Children({
       const response = await API.post(`/child-location-changes/${request._id}/location`, { address: data.address, lat: data.lat, lng: data.lng });
       const result = response.data?.data || {};
       setMapType(null);
+      setLocationChoiceType("");
       setApprovedLocationRequest(null);
       if (result.amountDue > 0) {
         const orderResponse = await API.post(`/child-location-changes/${request._id}/order`);
@@ -942,6 +950,7 @@ function Children({
       );
 
       setLocationRequestType("");
+      setLocationChoiceType("");
       setApprovedLocationRequest(null);
 
       setEditingChild(
@@ -2494,6 +2503,19 @@ function Children({
           />
         )}
 
+        {locationChoiceType && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-[420px] rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
+              <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Location already updated</p>
+              <h2 className="mt-1 text-[21px] font-extrabold text-black">Keep or change it again?</h2>
+              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your {locationChoiceType === "home" ? "home" : "school"} location was updated previously. Continue using it, or submit a new request to change it again.</p>
+              <div className="mt-4 grid gap-2">
+                <button type="button" onClick={() => { setLocationChoiceType(""); showMessage({ title: "Location unchanged", message: "Your current location will remain in use." }); }} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700">Continue with current location</button>
+                <button type="button" onClick={() => { setLocationRequestType(locationChoiceType); setLocationReason(""); setLocationChoiceType(""); }} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black">Change location again</button>
+              </div>
+            </div>
+          </div>
+        )}
         {locationRequestType && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
             <div className="w-full max-w-[420px] rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
