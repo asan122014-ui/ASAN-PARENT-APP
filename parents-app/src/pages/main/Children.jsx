@@ -446,6 +446,7 @@ function Children({
   const [approvedLocationRequest, setApprovedLocationRequest] = useState(null);
   const [locationChoiceType, setLocationChoiceType] = useState("");
   const [pendingLocationPayment, setPendingLocationPayment] = useState(null);
+  const [locationPaymentPreview, setLocationPaymentPreview] = useState(null);
 
   /* =======================================================
      APP DIALOG STATE
@@ -891,10 +892,17 @@ function Children({
   const continuePendingLocationPayment = async () => {
     const request = pendingLocationPayment;
     if (!request?._id) return;
+    setLocationPaymentPreview(request);
+    setPendingLocationPayment(null);
+  };
+
+  const payLocationAdjustment = async () => {
+    const request = locationPaymentPreview;
+    if (!request?._id) return;
     setLocationRequestLoading(true);
     try {
       const orderResponse = await API.post(`/child-location-changes/${request._id}/order`);
-      setPendingLocationPayment(null);
+      setLocationPaymentPreview(null);
       await checkoutLocationAdjustment(request, orderResponse.data?.data);
     } catch (error) {
       showMessage({ title: "Payment could not be opened", type: "error", message: error.response?.data?.message || error.message || "Please try again." });
@@ -936,7 +944,21 @@ function Children({
         setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
         await fetchChildren();
         showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
-      } catch (error) { showMessage({ title: "Payment verification pending", type: "error", message: error.response?.data?.message || "The payment could not be verified yet. Check the payment status before trying again." }); }
+      } catch (error) {
+        try {
+          const recovery = await API.post(`/child-location-changes/${request._id}/reconcile`);
+          if (recovery.data?.data?.paid) {
+            setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
+            await fetchChildren();
+            showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
+            return;
+          }
+        } catch (recoveryError) {
+          showMessage({ title: "Payment verification pending", type: "error", message: recoveryError.response?.data?.message || error.response?.data?.message || recoveryError.message || "Payment status is being checked. Please refresh before trying again." });
+          return;
+        }
+        showMessage({ title: "Payment verification pending", type: "error", message: error.response?.data?.message || "Razorpay has not confirmed a captured payment yet. Please check again shortly." });
+      }
     }, modal: { ondismiss: () => showMessage({ title: "Payment not completed", message: "Your new location has not been applied. Reopen this location request to complete the price adjustment." }) } });
     checkout.on("payment.failed", (event) => showMessage({ title: "Payment failed", type: "error", message: event.error?.description || "The route price adjustment was not paid. Your current location remains active." }));
     checkout.open();
@@ -954,8 +976,23 @@ function Children({
       setPendingLocationPayment(null);
       setApprovedLocationRequest(null);
       if (result.amountDue > 0) {
-        const orderResponse = await API.post(`/child-location-changes/${request._id}/order`);
-        await checkoutLocationAdjustment({ ...request, childId: editingChild._id, locationType: request.locationType, proposedAddress: data.address, proposedCoordinates: { lat: data.lat, lng: data.lng }, newMonthlyPrice: result.newMonthlyPrice }, orderResponse.data?.data);
+        setLocationPaymentPreview({
+          ...request,
+          childId: editingChild?._id || request.childId,
+          locationType: request.locationType,
+          proposedAddress: data.address,
+          proposedCoordinates: { lat: data.lat, lng: data.lng },
+          oldDistanceKm: result.oldDistanceKm,
+          newDistanceKm: result.newDistanceKm,
+          addedDistanceKm: result.addedDistanceKm,
+          remainingServiceDays: result.remainingServiceDays,
+          extraDistanceDailyCharge: result.extraDistanceDailyCharge,
+          distanceChargeDue: result.distanceChargeDue,
+          platformFeeDue: result.platformFeeDue,
+          currentMonthlyPrice: result.currentMonthlyPrice,
+          newMonthlyPrice: result.newMonthlyPrice,
+          amountDue: result.amountDue,
+        });
         return;
       }
       setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: data.address, [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: { lat: data.lat, lng: data.lng } }));
@@ -988,6 +1025,7 @@ function Children({
       setLocationChoiceType("");
       setPendingLocationPayment(null);
       setApprovedLocationRequest(null);
+      setLocationPaymentPreview(null);
 
       setEditingChild(
         null
@@ -2548,6 +2586,30 @@ function Children({
               <div className="mt-4 grid gap-2">
                 <button type="button" disabled={locationRequestLoading} onClick={continuePendingLocationPayment} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Please wait..." : "Continue with payment"}</button>
                 <button type="button" disabled={locationRequestLoading} onClick={revisePendingLocation} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700 disabled:opacity-50">Change location again</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {locationPaymentPreview && (
+          <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
+              <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Route price adjustment</p>
+              <h2 className="mt-1 text-[21px] font-extrabold text-black">Review your updated cost</h2>
+              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your current location stays active until the adjustment payment is complete.</p>
+              <div className="mt-4 rounded-[18px] border border-[#F0DFBC] bg-[#FFF9EC] p-4 text-[13px]">
+                <div className="flex justify-between gap-3 py-1.5 text-zinc-600"><span>Previous route distance</span><strong className="text-zinc-900">{Number(locationPaymentPreview.oldDistanceKm || 0).toFixed(2)} km</strong></div>
+                <div className="flex justify-between gap-3 py-1.5 text-zinc-600"><span>Updated route distance</span><strong className="text-zinc-900">{Number(locationPaymentPreview.newDistanceKm || 0).toFixed(2)} km</strong></div>
+                <div className="flex justify-between gap-3 border-b border-[#EAD9B8] py-1.5 text-zinc-600"><span>Additional distance</span><strong className="text-zinc-900">{Number(locationPaymentPreview.addedDistanceKm || 0).toFixed(2)} km</strong></div>
+                <div className="flex justify-between gap-3 pt-3 text-zinc-700"><span>Additional distance charge</span><strong className="text-zinc-900">₹{Number(locationPaymentPreview.distanceChargeDue || 0).toFixed(2)}</strong></div>
+                {Number(locationPaymentPreview.extraDistanceDailyCharge) > 0 && <p className="pb-1 text-[11px] text-zinc-500">₹{Number(locationPaymentPreview.extraDistanceDailyCharge).toFixed(2)} per remaining service day × {Number(locationPaymentPreview.remainingServiceDays || 0)} days</p>}
+                <div className="flex justify-between gap-3 py-1.5 text-zinc-700"><span>Platform fee (2%)</span><strong className="text-zinc-900">₹{Number(locationPaymentPreview.platformFeeDue || 0).toFixed(2)}</strong></div>
+                <div className="mt-2 flex justify-between gap-3 border-t border-[#EAD9B8] pt-3 text-[16px] font-extrabold"><span>Due now</span><span>₹{Number(locationPaymentPreview.amountDue || 0).toFixed(2)}</span></div>
+                <div className="mt-3 flex justify-between gap-3 rounded-[12px] bg-white px-3 py-2 text-[12px] text-zinc-600"><span>New monthly price from next billing cycle</span><strong className="text-zinc-900">₹{Number(locationPaymentPreview.newMonthlyPrice || 0).toFixed(2)}</strong></div>
+              </div>
+              <div className="mt-4 grid gap-2">
+                <button type="button" disabled={locationRequestLoading} onClick={payLocationAdjustment} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Please wait..." : `Pay ₹${Number(locationPaymentPreview.amountDue || 0).toFixed(2)} securely`}</button>
+                <button type="button" disabled={locationRequestLoading} onClick={() => setLocationPaymentPreview(null)} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700">Not now</button>
               </div>
             </div>
           </div>
