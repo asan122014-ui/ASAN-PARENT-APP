@@ -851,6 +851,18 @@ function Children({
       const pending = requests.find((item) => item.locationType === locationType && ["pending", "awaiting_payment"].includes(item.status));
       if (pending) {
         if (pending.status === "awaiting_payment") {
+          try {
+            const reconciliation = await API.post(`/child-location-changes/${pending._id}/reconcile`);
+            if (reconciliation.data?.data?.paid) {
+              await fetchChildren();
+              setPendingLocationPayment(null);
+              setLocationChoiceType(locationType);
+              showMessage({ title: "Payment confirmed", type: "success", message: "Your updated location is active. You can continue with it or request another change." });
+              return;
+            }
+          } catch {
+            // If no captured payment exists, keep the resume-payment choices below.
+          }
           setPendingLocationPayment(pending);
           setLocationChoiceType("");
           return;
@@ -943,6 +955,7 @@ function Children({
         await API.post(`/child-location-changes/${request._id}/verify`, payment);
         setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
         await fetchChildren();
+        setLocationChoiceType(request.locationType);
         showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
       } catch (error) {
         try {
@@ -950,6 +963,7 @@ function Children({
           if (recovery.data?.data?.paid) {
             setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
             await fetchChildren();
+            setLocationChoiceType(request.locationType);
             showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
             return;
           }
