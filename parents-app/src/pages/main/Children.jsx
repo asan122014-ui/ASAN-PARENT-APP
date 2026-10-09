@@ -445,6 +445,7 @@ function Children({
   const [locationRequestLoading, setLocationRequestLoading] = useState(false);
   const [approvedLocationRequest, setApprovedLocationRequest] = useState(null);
   const [locationChoiceType, setLocationChoiceType] = useState("");
+  const [pendingLocationPayment, setPendingLocationPayment] = useState(null);
 
   /* =======================================================
      APP DIALOG STATE
@@ -740,6 +741,7 @@ function Children({
     ) => {
       setLocationRequestType("");
       setLocationChoiceType("");
+      setPendingLocationPayment(null);
       setApprovedLocationRequest(null);
       setEditingChild(
         child
@@ -848,13 +850,14 @@ function Children({
       const pending = requests.find((item) => item.locationType === locationType && ["pending", "awaiting_payment"].includes(item.status));
       if (pending) {
         if (pending.status === "awaiting_payment") {
-          const orderResponse = await API.post(`/child-location-changes/${pending._id}/order`);
-          await checkoutLocationAdjustment(pending, orderResponse.data?.data);
+          setPendingLocationPayment(pending);
+          setLocationChoiceType("");
           return;
         }
         showMessage({ title: "Request in progress", message: pending.status === "pending" ? "Your request will be processed by the end of the day, and an agent will call to confirm the location change." : "Complete the location price adjustment before starting another request." });
         return;
       }
+      setPendingLocationPayment(null);
       const completed = requests.find((item) => item.locationType === locationType && item.status === "completed");
       if (completed) {
         setLocationChoiceType(locationType);
@@ -880,6 +883,37 @@ function Children({
       showMessage({ title: "Request sent", type: "success", message: response.data?.message || "Your request will be processed by the end of the day, and an agent will call to confirm the location change." });
     } catch (error) {
       showMessage({ title: "Request not sent", type: "error", message: error.response?.data?.message || "Please try again later." });
+    } finally {
+      setLocationRequestLoading(false);
+    }
+  };
+
+  const continuePendingLocationPayment = async () => {
+    const request = pendingLocationPayment;
+    if (!request?._id) return;
+    setLocationRequestLoading(true);
+    try {
+      const orderResponse = await API.post(`/child-location-changes/${request._id}/order`);
+      setPendingLocationPayment(null);
+      await checkoutLocationAdjustment(request, orderResponse.data?.data);
+    } catch (error) {
+      showMessage({ title: "Payment could not be opened", type: "error", message: error.response?.data?.message || error.message || "Please try again." });
+    } finally {
+      setLocationRequestLoading(false);
+    }
+  };
+
+  const revisePendingLocation = async () => {
+    const request = pendingLocationPayment;
+    if (!request?._id) return;
+    setLocationRequestLoading(true);
+    try {
+      const response = await API.post(`/child-location-changes/${request._id}/revise`);
+      setPendingLocationPayment(null);
+      setApprovedLocationRequest(response.data?.data || request);
+      setMapType(request.locationType === "home" ? "pickup" : "drop");
+    } catch (error) {
+      showMessage({ title: "Unable to change location", type: "error", message: error.response?.data?.message || "Please try again." });
     } finally {
       setLocationRequestLoading(false);
     }
@@ -917,6 +951,7 @@ function Children({
       const result = response.data?.data || {};
       setMapType(null);
       setLocationChoiceType("");
+      setPendingLocationPayment(null);
       setApprovedLocationRequest(null);
       if (result.amountDue > 0) {
         const orderResponse = await API.post(`/child-location-changes/${request._id}/order`);
@@ -951,6 +986,7 @@ function Children({
 
       setLocationRequestType("");
       setLocationChoiceType("");
+      setPendingLocationPayment(null);
       setApprovedLocationRequest(null);
 
       setEditingChild(
@@ -2501,6 +2537,20 @@ function Children({
               setMapType(null);
             }}
           />
+        )}
+
+        {pendingLocationPayment && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-[420px] rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
+              <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Payment not completed</p>
+              <h2 className="mt-1 text-[21px] font-extrabold text-black">What would you like to do?</h2>
+              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your current {pendingLocationPayment.locationType === "home" ? "home" : "school"} location is still active. Continue to pay for the selected location, or choose a different location and recalculate the adjustment.</p>
+              <div className="mt-4 grid gap-2">
+                <button type="button" disabled={locationRequestLoading} onClick={continuePendingLocationPayment} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Please wait..." : "Continue with payment"}</button>
+                <button type="button" disabled={locationRequestLoading} onClick={revisePendingLocation} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700 disabled:opacity-50">Change location again</button>
+              </div>
+            </div>
+          </div>
         )}
 
         {locationChoiceType && (
