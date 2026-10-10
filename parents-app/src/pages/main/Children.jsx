@@ -447,6 +447,8 @@ function Children({
   const [locationChoiceType, setLocationChoiceType] = useState("");
   const [pendingLocationPayment, setPendingLocationPayment] = useState(null);
   const [locationPaymentPreview, setLocationPaymentPreview] = useState(null);
+  const [locationScopeChoice, setLocationScopeChoice] = useState(false);
+  const [bothHomePoint, setBothHomePoint] = useState(null);
   const [locationAccessAllowed, setLocationAccessAllowed] = useState(false);
   const [locationAccessCode, setLocationAccessCode] = useState("");
   useEffect(() => {
@@ -861,13 +863,19 @@ function Children({
     try {
       const response = await API.get(`/child-location-changes/children/${editingChild._id}`);
       const requests = response.data?.data || [];
-      const approved = requests.find((item) => item.locationType === locationType && item.status === "approved");
+      const overlaps = (item) => item.locationType === locationType || item.locationType === "both" || locationType === "both";
+      const approved = requests.find((item) => overlaps(item) && item.status === "approved");
       if (approved) {
+        if (approved.locationType !== locationType) {
+          showMessage({ title: "Existing request", message: "Complete the existing approved location request before changing a different set of locations." });
+          return;
+        }
+        setBothHomePoint(null);
         setApprovedLocationRequest(approved);
-        setMapType(locationType === "home" ? "pickup" : "drop");
+        setMapType(locationType === "school" ? "drop" : "pickup");
         return;
       }
-      const pending = requests.find((item) => item.locationType === locationType && ["pending", "awaiting_payment"].includes(item.status));
+      const pending = requests.find((item) => overlaps(item) && ["pending", "awaiting_payment"].includes(item.status));
       if (pending) {
         if (pending.status === "awaiting_payment") {
           try {
@@ -927,16 +935,20 @@ function Children({
     setPendingLocationPayment(null);
   };
 
+  const updateLocationForm = (request) => {
+    setForm((previous) => ({ ...previous,
+      ...(["home", "both"].includes(request.locationType) ? { pickupLocation: request.proposedAddress, pickupCoords: request.proposedCoordinates } : {}),
+      ...(["school", "both"].includes(request.locationType) ? { dropoffLocation: request.locationType === "both" ? request.proposedSchoolAddress : request.proposedAddress, dropoffCoords: request.locationType === "both" ? request.proposedSchoolCoordinates : request.proposedCoordinates } : {}),
+    }));
+  };
+
   const applyLocationAccessCode = async () => {
     const request = locationPaymentPreview;
     if (!request?._id || !locationAccessCode.trim()) return;
     setLocationRequestLoading(true);
     try {
       await API.post(`/child-location-changes/${request._id}/developer-apply`, { code: locationAccessCode.trim() });
-      setForm((previous) => ({ ...previous,
-        [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress,
-        [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates,
-      }));
+      updateLocationForm(request);
       await fetchChildren();
       setLocationPaymentPreview(null);
       showMessage({ title: "Location changed", type: "success", message: "Your new location is active." });
@@ -968,7 +980,8 @@ function Children({
       const response = await API.post(`/child-location-changes/${request._id}/revise`);
       setPendingLocationPayment(null);
       setApprovedLocationRequest(response.data?.data || request);
-      setMapType(request.locationType === "home" ? "pickup" : "drop");
+      setBothHomePoint(null);
+      setMapType(request.locationType === "school" ? "drop" : "pickup");
     } catch (error) {
       showMessage({ title: "Unable to change location", type: "error", message: error.response?.data?.message || "Please try again." });
     } finally {
@@ -990,7 +1003,7 @@ function Children({
     const checkout = new window.Razorpay({ key: order.keyId, amount: order.amount, currency: order.currency, order_id: order.order_id, name: "ASAN RIDES", description: `One-time route adjustment ₹${dueNow}; new monthly price ₹${nextMonthlyPrice}`, handler: async (payment) => {
       try {
         await API.post(`/child-location-changes/${request._id}/verify`, payment);
-        setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
+        updateLocationForm(request);
         await fetchChildren();
         setLocationChoiceType(request.locationType);
         showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
@@ -998,7 +1011,7 @@ function Children({
         try {
           const recovery = await API.post(`/child-location-changes/${request._id}/reconcile`);
           if (recovery.data?.data?.paid) {
-            setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress || previous[request.locationType === "home" ? "pickupLocation" : "dropoffLocation"], [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates || previous[request.locationType === "home" ? "pickupCoords" : "dropoffCoords"] }));
+            updateLocationForm(request);
             await fetchChildren();
             setLocationChoiceType(request.locationType);
             showMessage({ title: "Location updated", type: "success", message: `Payment received. Your new route is active and the monthly price is ₹${Number(request.newMonthlyPrice).toFixed(2)}.` });
@@ -1018,9 +1031,17 @@ function Children({
   const confirmApprovedLocation = async (data) => {
     const request = approvedLocationRequest;
     if (!request?._id) return;
+    if (request.locationType === "both" && mapType === "pickup") {
+      setBothHomePoint(data);
+      setMapType("drop");
+      return;
+    }
+    const payload = request.locationType === "both" ? { home: bothHomePoint, school: data } : { address: data.address, lat: data.lat, lng: data.lng };
     setLocationRequestLoading(true);
     try {
-      const response = await API.post(`/child-location-changes/${request._id}/location`, { address: data.address, lat: data.lat, lng: data.lng });
+      const response = await API.post(`/child-location-changes/${request._id}/location`, payload);
+      const proposed = request.locationType === "both" ? bothHomePoint : data;
+      const updatedRequest = { ...request, proposedAddress: proposed.address, proposedCoordinates: { lat: proposed.lat, lng: proposed.lng }, ...(request.locationType === "both" ? { proposedSchoolAddress: data.address, proposedSchoolCoordinates: { lat: data.lat, lng: data.lng } } : {}) };
       const result = response.data?.data || {};
       setMapType(null);
       setLocationChoiceType("");
@@ -1028,11 +1049,11 @@ function Children({
       setApprovedLocationRequest(null);
       if (result.amountDue > 0) {
         setLocationPaymentPreview({
-          ...request,
+          ...updatedRequest,
           childId: editingChild?._id || request.childId,
           locationType: request.locationType,
-          proposedAddress: data.address,
-          proposedCoordinates: { lat: data.lat, lng: data.lng },
+          proposedAddress: updatedRequest.proposedAddress,
+          proposedCoordinates: updatedRequest.proposedCoordinates,
           oldDistanceKm: result.oldDistanceKm,
           newDistanceKm: result.newDistanceKm,
           addedDistanceKm: result.addedDistanceKm,
@@ -1046,7 +1067,7 @@ function Children({
         });
         return;
       }
-      setForm((previous) => ({ ...previous, [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: data.address, [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: { lat: data.lat, lng: data.lng } }));
+      updateLocationForm(updatedRequest);
       await fetchChildren();
       showMessage({ title: "Location updated", type: "success", message: result.message || "The approved location has been updated." });
     } catch (error) {
@@ -2183,7 +2204,7 @@ function Children({
               >
                 <button
                   type="button"
-                  onClick={() => editingChild ? beginLocationChange("home") : setMapType("pickup")}
+                  onClick={() => editingChild ? setLocationScopeChoice(true) : setMapType("pickup")}
                   className="
                     clean-stack-row
                   "
@@ -2322,7 +2343,7 @@ function Children({
               >
                 <button
                   type="button"
-                  onClick={() => editingChild ? beginLocationChange("school") : setMapType("drop")}
+                  onClick={() => editingChild ? setLocationScopeChoice(true) : setMapType("drop")}
                   className="
                     clean-stack-row
                   "
@@ -2606,6 +2627,7 @@ function Children({
 
         {mapType && (
           <GoogleLocationPicker
+            key={mapType}
             mapType={mapType}
             initialCoords={mapType === "pickup" ? form.pickupCoords : form.dropoffCoords}
             initialAddress={mapType === "pickup" ? form.pickupLocation : form.dropoffLocation}
@@ -2633,7 +2655,7 @@ function Children({
             <div className="w-full max-w-[420px] rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
               <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Payment not completed</p>
               <h2 className="mt-1 text-[21px] font-extrabold text-black">What would you like to do?</h2>
-              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your current {pendingLocationPayment.locationType === "home" ? "home" : "school"} location is still active. Continue to pay for the selected location, or choose a different location and recalculate the adjustment.</p>
+              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your current {pendingLocationPayment.locationType === "both" ? "home and school locations are" : `${pendingLocationPayment.locationType} location is`} still active. Continue to pay, or select new locations and recalculate the adjustment.</p>
               <div className="mt-4 grid gap-2">
                 <button type="button" disabled={locationRequestLoading} onClick={continuePendingLocationPayment} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Please wait..." : "Continue with payment"}</button>
                 <button type="button" disabled={locationRequestLoading} onClick={revisePendingLocation} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700 disabled:opacity-50">Change location again</button>
@@ -2670,12 +2692,25 @@ function Children({
           </div>
         )}
 
+        {locationScopeChoice && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-[420px] rounded-[24px] bg-[#FFFDF8] p-5 shadow-2xl">
+              <h2 className="text-xl font-extrabold">Which locations are changing?</h2>
+              <p className="mt-2 text-sm text-zinc-600">For both locations, select your new home first and then your school. We calculate the final route once both are selected.</p>
+              <div className="mt-4 grid gap-2">
+                {[["home", "Home only"], ["school", "School only"], ["both", "Both home and school"]].map(([type, label]) => <button key={type} type="button" onClick={() => { setLocationScopeChoice(false); beginLocationChange(type); }} className="h-11 rounded-xl bg-[#FFB000] font-bold">{label}</button>)}
+                <button type="button" onClick={() => setLocationScopeChoice(false)} className="h-11 rounded-xl border font-bold">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {locationChoiceType && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
             <div className="w-full max-w-[420px] rounded-[24px] border border-[#F0DFBC] bg-[#FFFDF8] p-5 shadow-2xl">
               <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Location already updated</p>
               <h2 className="mt-1 text-[21px] font-extrabold text-black">Keep or change it again?</h2>
-              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your {locationChoiceType === "home" ? "home" : "school"} location was updated previously. Continue using it, or submit a new request to change it again.</p>
+              <p className="mt-2 text-[12px] leading-5 text-zinc-600">Your {locationChoiceType === "both" ? "home and school locations were" : `${locationChoiceType} location was`} updated previously. Continue using them, or submit a new request.</p>
               <div className="mt-4 grid gap-2">
                 <button type="button" onClick={() => { setLocationChoiceType(""); showMessage({ title: "Location unchanged", message: "Your current location will remain in use." }); }} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700">Continue with current location</button>
                 <button type="button" onClick={() => { setLocationRequestType(locationChoiceType); setLocationReason(""); setLocationChoiceType(""); }} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black">Change location again</button>
@@ -2689,7 +2724,7 @@ function Children({
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[9px] font-extrabold uppercase tracking-[1.7px] text-[#B77D00]">Location change request</p>
-                  <h2 className="mt-1 text-[21px] font-extrabold text-black">Why change the {locationRequestType === "home" ? "home" : "school"} location?</h2>
+                  <h2 className="mt-1 text-[21px] font-extrabold text-black">{locationRequestType === "both" ? "Why change both locations?" : `Why change the ${locationRequestType === "home" ? "home" : "school"} location?`}</h2>
                 </div>
                 <button type="button" onClick={() => setLocationRequestType("")} className="rounded-full p-2 text-zinc-500" aria-label="Close"><X size={18} /></button>
               </div>

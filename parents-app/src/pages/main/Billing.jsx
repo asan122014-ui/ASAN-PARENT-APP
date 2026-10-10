@@ -1203,7 +1203,7 @@ const Billing = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-[8px] font-extrabold uppercase tracking-[1.2px] text-green-700">Location change paid · {paidAt ? new Date(paidAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Date unavailable"}</p>
-                          <p className="mt-1 truncate text-[12px] font-extrabold text-black">{change.childName || "Child"} · {change.locationType === "home" ? "Home pickup" : "School drop-off"}</p>
+                          <p className="mt-1 truncate text-[12px] font-extrabold text-black">{change.childName || "Child"} · {change.locationType === "both" ? "Home and school" : change.locationType === "both" ? "Home and school" : change.locationType === "home" ? "Home pickup" : "School drop-off"}</p>
                           <p className="mt-1 line-clamp-2 text-[9px] text-zinc-500">{change.proposedAddress || "Updated route"}</p>
                           <p className="mt-1 text-[8px] text-zinc-500">Route: {Number(change.oldDistanceKm || 0).toFixed(2)} km → {Number(change.newDistanceKm || 0).toFixed(2)} km</p>
                         </div>
