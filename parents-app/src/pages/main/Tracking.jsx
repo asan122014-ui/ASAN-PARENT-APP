@@ -358,9 +358,11 @@ function Tracking() {
   ] = useState([]);
 
   const mapStops = routeStops.length ? routeStops : students;
+  const [routeMessage, setRouteMessage] = useState("Waiting for live trip information");
 
   const tripPhase =
     mapStops.length > 0 &&
+    mapStops.some((student) => ["onboard", "dropped"].includes(student.status)) &&
     !mapStops.some(
       (
         student
@@ -399,6 +401,8 @@ const [
 
   const lastRouteCall =
     useRef(0);
+  const lastRouteKey = useRef("");
+  const routeRequestId = useRef(0);
 
   const prevPositionRef =
     useRef(null);
@@ -473,18 +477,20 @@ const [
           tripPhase ===
           "pickup"
         ) {
-          return isEvening
+          const coords = isEvening
             ? student
                 .dropLocationCoords
             : student
                 .location;
+          return coords?.lat != null && coords?.lng != null ? { lat: Number(coords.lat), lng: Number(coords.lng) } : null;
         }
 
-        return isEvening
+        const coords = isEvening
           ? student
               .location
           : student
               .dropLocationCoords;
+        return coords?.lat != null && coords?.lng != null ? { lat: Number(coords.lat), lng: Number(coords.lng) } : null;
       },
       [
         tripPhase,
@@ -664,7 +670,6 @@ const [
               (
                 current
               ) =>
-                current ||
                 storedLocation
             );
 
@@ -672,7 +677,6 @@ const [
               (
                 current
               ) =>
-                current ||
                 storedLocation
             );
 
@@ -704,7 +708,9 @@ const [
                 ...student,
                 status:
                   normalizeStudentStatus(
-                    student.status
+                    driverData?.routeStops?.find((stop) =>
+                      String(stop.childId || stop._id) === String(student._id)
+                    )?.status || student.status
                   ),
               })
             )
@@ -1108,6 +1114,11 @@ const [
       !isLoaded ||
       !window.google
     ) {
+      setEta("Unavailable");
+      setDistance("Unavailable");
+      setDirections(null);
+      setRouteMessage(!position ? "Waiting for the driver's location" : "Waiting for the next active stop");
+      routeRequestId.current += 1;
       return;
     }
 
@@ -1119,18 +1130,22 @@ const [
 
     const now =
       Date.now();
+    const routeKey = `${tripPhase}:${orderedRouteStops.map((stop) => `${stop.childId || stop._id}:${getCoords(stop)?.lat}:${getCoords(stop)?.lng}`).join("|")}`;
 
     if (
       now -
         lastRouteCall
           .current <
-      15000
+      15000 && lastRouteKey.current === routeKey
     ) {
       return;
     }
 
     lastRouteCall.current =
       now;
+    lastRouteKey.current = routeKey;
+    const requestId = ++routeRequestId.current;
+    setRouteMessage("Calculating the road route…");
 
     const validRouteStops = orderedRouteStops
       .map((student) => ({ student, coords: getCoords(student) }))
@@ -1186,6 +1201,7 @@ const [
         result,
         status
       ) => {
+        if (requestId !== routeRequestId.current) return;
         if (
           status ===
           "OK"
@@ -1194,39 +1210,31 @@ const [
             result
           );
 
-          const leg = result.routes?.[0]?.legs?.[0];
-
-          setEta(
-            leg
-              ?.duration_in_traffic
-              ?.text ||
-              leg
-                ?.duration
-                ?.text ||
-              "--"
-          );
-
-          setDistance(
-            leg?.distance?.text ||
-              "--"
-          );
+          const ownIndex = validRouteStops.findIndex(({ student }) => String(student.parentId) === String(parentId));
+          const legs = (result.routes?.[0]?.legs || []).slice(0, ownIndex >= 0 ? ownIndex + 1 : 1);
+          const seconds = legs.reduce((total, leg) => total + (leg.duration_in_traffic?.value ?? leg.duration?.value ?? 0), 0);
+          const meters = legs.reduce((total, leg) => total + (leg.distance?.value ?? 0), 0);
+          setEta(`${Math.max(1, Math.ceil(seconds / 60))} min`);
+          setDistance(meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`);
+          setRouteMessage(ownIndex >= 0 ? `Road route to your child's ${tripPhase === "pickup" ? "pickup" : "drop-off"} · includes preceding stops` : "Road route to the driver's next stop");
         } else {
           setDirections(
             null
           );
 
           setEta(
-            "--"
+            "Unavailable"
           );
 
           setDistance(
-            "--"
+            "Unavailable"
           );
 
           console.error(
             "Directions failed:",
             status
           );
+          setRouteMessage("Road directions are temporarily unavailable. Live driver location is still shown.");
         }
       }
     );
@@ -1279,21 +1287,21 @@ const [
         status ===
         "waiting"
       ) {
-        return "Waiting";
+        return driver?.activeTripType ? "Driver arriving" : "Waiting for trip to start";
       }
 
       if (
         status ===
         "onboard"
       ) {
-        return "On Board";
+        return driver?.activeTripType === "afternoon" ? "Going home" : "Going to school";
       }
 
       if (
         status ===
         "dropped"
       ) {
-        return "Dropped";
+        return driver?.activeTripType === "afternoon" ? "Reached home" : "Reached school";
       }
 
       if (
@@ -1311,7 +1319,7 @@ const [
       ? getStatusText(
           myChild.status
         )
-      : "Waiting";
+      : "Status unavailable";
 
   /* =======================================================
      SHARE TRIP
@@ -1807,6 +1815,7 @@ const [
             shadow-[0_12px_32px_rgba(94,72,14,0.08)]
           "
         >
+          <p role="status" className="border-b border-[#F0E4BF] px-4 py-2 text-[11px] text-zinc-600">{routeMessage}</p>
           <div
             className="
               relative
@@ -2239,6 +2248,7 @@ const [
                     directions
                   }
                   options={{
+                    preserveViewport: true,
                     suppressMarkers:
                       true,
 
@@ -2723,6 +2733,16 @@ const [
               }
             </span>
           </div>
+          {myChild && myChild.status !== "absent" && (
+            <ol aria-label="Your child's ride progress" className="grid grid-cols-4 gap-2 border-t border-[#F0E4BF] px-4 py-3 text-center text-[10px]">
+              {["Arriving", "Picked up", "Going", "Dropped"].map((label, index) => {
+                const currentStep = myChild.status === "dropped" ? 3 : myChild.status === "onboard" ? 2 : 0;
+                return <li key={label} aria-current={index === currentStep ? "step" : undefined} className={index <= currentStep ? "font-bold text-[#A97300]" : "text-zinc-400"}>
+                  <span className={`mx-auto mb-1 block h-2 w-2 rounded-full ${index <= currentStep ? "bg-[#FFB400]" : "bg-zinc-200"}`} />{label}
+                </li>;
+              })}
+            </ol>
+          )}
         </section>
 
         {/* =================================================
