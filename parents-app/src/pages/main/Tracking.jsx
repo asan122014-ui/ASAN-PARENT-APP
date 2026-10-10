@@ -38,6 +38,7 @@ import {
   Clock3,
   Route,
   Radio,
+  CheckCircle2,
 } from "lucide-react";
 
 /* =========================================================
@@ -279,7 +280,15 @@ const mapStyles = [
    TRACKING
 ========================================================= */
 
-function Tracking() {
+function Tracking({ setTab }) {
+  const [tripEnded, setTripEnded] = useState(false);
+  const activeTripSeen = useRef(false);
+
+  useEffect(() => {
+    if (!tripEnded) return;
+    const timeout = window.setTimeout(() => setTab("home"), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [tripEnded, setTab]);
   /* =======================================================
      LOCATION
   ======================================================= */
@@ -642,6 +651,12 @@ const [
           setDriver(
             driverData
           );
+          if (driverData?.activeTripType) {
+            activeTripSeen.current = true;
+          } else if (driverData && activeTripSeen.current) {
+            activeTripSeen.current = false;
+            setTripEnded(true);
+          }
 
           setRouteStops(
             Array.isArray(driverData?.routeStops)
@@ -1619,6 +1634,18 @@ const [
         pb-8
       "
     >
+      {tripEnded && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 px-5 backdrop-blur-sm">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="trip-ended-title" aria-describedby="trip-ended-description" className="w-full max-w-sm rounded-[28px] border border-[#ECD583] bg-[#FFFEFB] p-6 text-center shadow-xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF0B9] text-[#A97300]">
+              <CheckCircle2 size={26} />
+            </div>
+            <h2 id="trip-ended-title" className="text-xl font-extrabold text-black">Trip has ended</h2>
+            <p id="trip-ended-description" className="mt-3 text-sm text-zinc-600">Redirecting to your dashboard…</p>
+            <button type="button" autoFocus onClick={() => setTab("home")} className="mt-5 h-12 w-full rounded-xl bg-[#FFB400] font-bold text-black">Go to dashboard</button>
+          </div>
+        </div>
+      )}
       <div
         className="
           mx-auto

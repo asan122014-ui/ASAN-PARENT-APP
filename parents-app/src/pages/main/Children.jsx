@@ -3019,35 +3019,6 @@ function Children({
                   )
                 )}
 
-                <button
-                  type="button"
-                  onClick={
-                    openAddChild
-                  }
-                  className="
-                    flex
-                    h-[54px]
-                    w-full
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-[16px]
-                    border
-                    border-[#E8CC67]
-                    bg-[#FFFDF6]
-                    font-semibold
-                    text-[#B67D00]
-                    transition
-                    hover:bg-[#FFF7DC]
-                    active:scale-[0.99]
-                  "
-                >
-                  <Plus
-                    size={18}
-                  />
-
-                  Add Another Child
-                </button>
               </div>
             )}
           </main>

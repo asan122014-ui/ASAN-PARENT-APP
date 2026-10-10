@@ -634,7 +634,7 @@ function Trips({
           className="
             fixed
             inset-0
-            z-[100]
+            z-[120]
             flex
             items-center
             justify-center
@@ -655,7 +655,9 @@ function Trips({
               event.stopPropagation()
             }
             className="
-              max-h-[90vh]
+              max-h-[calc(100dvh-6rem)]
+              -translate-y-5
+              sm:max-h-[90vh]
               w-full
               max-w-[420px]
               overflow-y-auto
