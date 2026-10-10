@@ -453,12 +453,18 @@ function Children({
     let cancelled = false;
     setLocationAccessCode("");
     setLocationAccessAllowed(false);
+    let retry;
     if (locationPaymentPreview?._id) {
-      API.get("/child-location-changes/developer-access")
-        .then((response) => { if (!cancelled) setLocationAccessAllowed(response.data?.data?.allowed === true); })
+      const checkAccess = () => API.get("/child-location-changes/developer-access")
+        .then((response) => {
+          if (!cancelled) setLocationAccessAllowed(response.data?.data?.allowed === true);
+          clearInterval(retry);
+        })
         .catch(() => {});
+      retry = setInterval(checkAccess, 5000);
+      checkAccess();
     }
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearInterval(retry); };
   }, [locationPaymentPreview?._id]);
 
   /* =======================================================
