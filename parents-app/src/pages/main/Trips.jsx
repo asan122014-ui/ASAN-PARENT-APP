@@ -128,40 +128,9 @@ function Trips({
             ? res.data.data
             : [];
 
-        const [childrenResult, ...driverResults] = await Promise.allSettled([
-          API.get(`/child/parent/${parentId}`),
-          ...[...new Set(data.map((trip) => String(trip.driverId || "").trim().toUpperCase()).filter(Boolean))]
-            .map((driverId) => API.get(`/driver/tracking?driverId=${encodeURIComponent(driverId)}`)),
-        ]);
-
-        const children = childrenResult.status === "fulfilled" && Array.isArray(childrenResult.value.data?.data)
-          ? childrenResult.value.data.data
-          : [];
-        const childrenById = new Map(children.map((child) => [String(child._id), child]));
-        const driverIds = [...new Set(data.map((trip) => String(trip.driverId || "").trim().toUpperCase()).filter(Boolean))];
-        const driversById = new Map();
-        driverResults.forEach((result, index) => {
-          const driver = result.status === "fulfilled" ? result.value.data?.data : null;
-          if (driver) driversById.set(driverIds[index], driver);
-        });
-
-        const enriched = data.map((trip) => {
-          const childId = String(trip.child?._id || trip.child || "");
-          const child = trip.child && typeof trip.child === "object"
-            ? trip.child
-            : childrenById.get(childId) || null;
-          const driverId = String(trip.driverId || "").trim().toUpperCase();
-          return {
-            ...trip,
-            child: child ? { ...childrenById.get(childId), ...child } : trip.child,
-            driver: trip.driver?.name ? trip.driver : driversById.get(driverId) || null,
-            routeDistanceKm: Number(trip.routeDistanceKm || trip.child?.routeDistance || childrenById.get(childId)?.routeDistance) || null,
-          };
-        });
-
         const sorted =
           [
-            ...enriched,
+            ...data,
           ].sort(
             (
               a,
