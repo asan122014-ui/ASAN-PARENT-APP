@@ -447,6 +447,19 @@ function Children({
   const [locationChoiceType, setLocationChoiceType] = useState("");
   const [pendingLocationPayment, setPendingLocationPayment] = useState(null);
   const [locationPaymentPreview, setLocationPaymentPreview] = useState(null);
+  const [locationAccessAllowed, setLocationAccessAllowed] = useState(false);
+  const [locationAccessCode, setLocationAccessCode] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    setLocationAccessCode("");
+    setLocationAccessAllowed(false);
+    if (locationPaymentPreview?._id) {
+      API.get("/child-location-changes/developer-access")
+        .then((response) => { if (!cancelled) setLocationAccessAllowed(response.data?.data?.allowed === true); })
+        .catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [locationPaymentPreview?._id]);
 
   /* =======================================================
      APP DIALOG STATE
@@ -906,6 +919,24 @@ function Children({
     if (!request?._id) return;
     setLocationPaymentPreview(request);
     setPendingLocationPayment(null);
+  };
+
+  const applyLocationAccessCode = async () => {
+    const request = locationPaymentPreview;
+    if (!request?._id || !locationAccessCode.trim()) return;
+    setLocationRequestLoading(true);
+    try {
+      await API.post(`/child-location-changes/${request._id}/developer-apply`, { code: locationAccessCode.trim() });
+      setForm((previous) => ({ ...previous,
+        [request.locationType === "home" ? "pickupLocation" : "dropoffLocation"]: request.proposedAddress,
+        [request.locationType === "home" ? "pickupCoords" : "dropoffCoords"]: request.proposedCoordinates,
+      }));
+      await fetchChildren();
+      setLocationPaymentPreview(null);
+      showMessage({ title: "Location changed", type: "success", message: "Your new location is active." });
+    } catch (error) {
+      showMessage({ title: "Unable to change location", type: "error", message: error.response?.data?.message || "Please try again." });
+    } finally { setLocationRequestLoading(false); }
   };
 
   const payLocationAdjustment = async () => {
@@ -2622,6 +2653,10 @@ function Children({
                 <div className="mt-3 flex justify-between gap-3 rounded-[12px] bg-white px-3 py-2 text-[12px] text-zinc-600"><span>New monthly price from next billing cycle</span><strong className="text-zinc-900">₹{Number(locationPaymentPreview.newMonthlyPrice || 0).toFixed(2)}</strong></div>
               </div>
               <div className="mt-4 grid gap-2">
+                {locationAccessAllowed && <div className="flex gap-2">
+                  <input aria-label="Developer access code" placeholder="Access code" value={locationAccessCode} onChange={(event) => setLocationAccessCode(event.target.value)} disabled={locationRequestLoading} autoComplete="off" className="min-w-0 flex-1 rounded-[13px] border border-[#E9D8B7] bg-white px-3 py-2 text-sm" />
+                  <button type="button" onClick={applyLocationAccessCode} disabled={locationRequestLoading || !locationAccessCode.trim()} className="rounded-[13px] bg-[#FFB000] px-4 font-bold disabled:opacity-50">Apply</button>
+                </div>}
                 <button type="button" disabled={locationRequestLoading} onClick={payLocationAdjustment} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Please wait..." : `Pay ₹${Number(locationPaymentPreview.amountDue || 0).toFixed(2)} securely`}</button>
                 <button type="button" disabled={locationRequestLoading} onClick={() => setLocationPaymentPreview(null)} className="h-11 rounded-[13px] border border-[#E9D8B7] bg-white font-bold text-zinc-700">Not now</button>
               </div>

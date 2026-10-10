@@ -1303,7 +1303,7 @@ function Home({
   const rideGroups = useMemo(() => {
     const groups = new Map();
     sortedTrips
-      .filter((trip) => isRideActive(trip.uiStatus || trip.status))
+      .filter((trip) => isRideActive(trip.status || trip.uiStatus))
       .forEach((trip) => {
         const driver = trip.driver || trip.assignedDriver || {};
         const driverId = String(
@@ -1342,9 +1342,9 @@ function Home({
 
         isRideActive(
 
-          trip.uiStatus ||
+          trip.status ||
 
-            trip.status
+            trip.uiStatus
 
         )
 
@@ -2610,15 +2610,24 @@ function Home({
                     <div className="mt-4 space-y-2 border-t border-[#F0E8D2] pt-3">
                       {children.map(({ trip, child }, index) => {
                         const stage = getRideStage(trip);
-                        const status = stage === 3 ? "Reached" : stage === 2 ? "Picked up" : stage === 1 ? "On the way" : "Waiting for pickup";
+                        const absent = normalizeStatus(trip.child?.status || trip.childStatus || trip.uiStatus) === "absent";
+                        const status = absent ? "Absent" : stage === 3 ? "Reached" : stage === 2 ? "Picked up" : stage === 1 ? "On the way" : "Ride started";
                         const name = child?.name || trip.childName || `Child ${index + 1}`;
                         return (
-                          <div key={String(child?._id || trip.child || trip._id)} className="flex items-center justify-between gap-3">
+                          <div key={String(child?._id || trip.child || trip._id)}>
+                            <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-2.5">
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FFF1C8] text-[9px] font-extrabold text-[#9A6900]">{index + 1}</span>
                               <span className="truncate text-[11px] font-bold text-black">{name}</span>
                             </div>
                             <span className="shrink-0 text-[9px] font-semibold text-zinc-500">{status}</span>
+                            </div>
+                            {!absent && (
+                              <div className="mt-3 rounded-[18px] border border-[#EEDFB7] bg-[#FFFDF7] p-3">
+                                <p className="mb-3 text-[8px] font-bold uppercase tracking-[1.3px] text-zinc-400">Journey Progress</p>
+                                <RideProgress stage={stage} hasTrip active />
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -3615,7 +3624,7 @@ function Home({
 
 
 
-              {hasAssignedDriver && (
+              {activeTrip && (
 
                 <div
 
@@ -4708,10 +4717,6 @@ function isRideActive(
 
   return [
 
-    "waiting",
-
-    "pending",
-
     "started",
 
     "ride_started",
@@ -4790,9 +4795,9 @@ function getRideStage(
 
       trip
 
-        ? trip.uiStatus ||
+        ? trip.status ||
 
-            trip.status
+            trip.uiStatus
 
         : tripOrStatus
 
