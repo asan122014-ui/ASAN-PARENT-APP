@@ -7,14 +7,12 @@ import {
 import {
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   Clock,
   FileText,
   Loader2,
   MapPin,
   Navigation,
   Route,
-  Star,
   User,
   X,
   Car,
@@ -130,9 +128,40 @@ function Trips({
             ? res.data.data
             : [];
 
+        const [childrenResult, ...driverResults] = await Promise.allSettled([
+          API.get(`/child/parent/${parentId}`),
+          ...[...new Set(data.map((trip) => String(trip.driverId || "").trim().toUpperCase()).filter(Boolean))]
+            .map((driverId) => API.get(`/driver/tracking?driverId=${encodeURIComponent(driverId)}`)),
+        ]);
+
+        const children = childrenResult.status === "fulfilled" && Array.isArray(childrenResult.value.data?.data)
+          ? childrenResult.value.data.data
+          : [];
+        const childrenById = new Map(children.map((child) => [String(child._id), child]));
+        const driverIds = [...new Set(data.map((trip) => String(trip.driverId || "").trim().toUpperCase()).filter(Boolean))];
+        const driversById = new Map();
+        driverResults.forEach((result, index) => {
+          const driver = result.status === "fulfilled" ? result.value.data?.data : null;
+          if (driver) driversById.set(driverIds[index], driver);
+        });
+
+        const enriched = data.map((trip) => {
+          const childId = String(trip.child?._id || trip.child || "");
+          const child = trip.child && typeof trip.child === "object"
+            ? trip.child
+            : childrenById.get(childId) || null;
+          const driverId = String(trip.driverId || "").trim().toUpperCase();
+          return {
+            ...trip,
+            child: child ? { ...childrenById.get(childId), ...child } : trip.child,
+            driver: trip.driver?.name ? trip.driver : driversById.get(driverId) || null,
+            routeDistanceKm: Number(trip.routeDistanceKm || trip.child?.routeDistance || childrenById.get(childId)?.routeDistance) || null,
+          };
+        });
+
         const sorted =
           [
-            ...data,
+            ...enriched,
           ].sort(
             (
               a,
@@ -619,16 +648,6 @@ function Trips({
                         trip
                       )
                     }
-                    onRate={() => {
-                      /*
-                        Rating endpoint has
-                        not been verified yet.
-                      */
-
-                      alert(
-                        "Driver rating will be connected after the rating API is finalized."
-                      );
-                    }}
                   />
                 )
               )}
@@ -1185,7 +1204,6 @@ function StatBox({
 function TripCard({
   trip,
   onDetails,
-  onRate,
 }) {
   const tripDate =
     trip.startTime ||
@@ -1195,12 +1213,6 @@ function TripCard({
     getDriverName(
       trip
     );
-
-  const rating =
-    trip.driverRating ??
-    trip.driver?.rating ??
-    trip.rating ??
-    null;
 
   const distance =
     getDistance(
@@ -1408,41 +1420,6 @@ function TripCard({
               }
             </h3>
 
-            <div
-              className="
-                mt-1
-                flex
-                items-center
-                gap-1
-              "
-            >
-              <Star
-                size={
-                  14
-                }
-                className="
-                  fill-[#FFB400]
-                  text-[#FFB400]
-                "
-              />
-
-              <span
-                className="
-                  text-[10px]
-                  font-semibold
-                  text-zinc-500
-                "
-              >
-                {rating !==
-                null
-                  ? Number(
-                      rating
-                    ).toFixed(
-                      1
-                    )
-                  : "—"}
-              </span>
-            </div>
           </div>
 
           {/* =================================================
@@ -1545,15 +1522,13 @@ function TripCard({
           className="
             mt-4
             grid
-            grid-cols-2
+            grid-cols-1
             gap-3
           "
         >
           <button
             type="button"
-            onClick={
-              onDetails
-            }
+            onClick={onDetails}
             className="
               flex
               h-[47px]
@@ -1581,41 +1556,6 @@ function TripCard({
             Details
           </button>
 
-          <button
-            type="button"
-            onClick={
-              onRate
-            }
-            className="
-              flex
-              h-[47px]
-              items-center
-              justify-center
-              gap-2
-              rounded-[13px]
-              bg-[#FFB400]
-              text-[12px]
-              font-bold
-              text-black
-              transition
-              hover:bg-[#F2A900]
-              active:scale-[0.98]
-            "
-          >
-            <Star
-              size={
-                16
-              }
-            />
-
-            Rate Driver
-
-            <ChevronRight
-              size={
-                16
-              }
-            />
-          </button>
         </div>
       </div>
     </article>
@@ -2400,6 +2340,8 @@ function getDistance(
   const distance =
     trip?.distance ??
     trip?.distanceKm ??
+    trip?.routeDistanceKm ??
+    trip?.child?.routeDistance ??
     trip?.route?.distance ??
     trip?.routeDistance;
 
