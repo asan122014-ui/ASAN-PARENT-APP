@@ -8,9 +8,7 @@ import {
 
 import {
   GoogleMap,
-  Marker,
-  InfoWindow,
-  DirectionsRenderer,
+  Marker,  DirectionsRenderer,
   useJsApiLoader,
 } from "@react-google-maps/api";
 
@@ -311,11 +309,6 @@ function Tracking({ setTab }) {
   ] = useState(0);
 
   const [
-    selectedStop,
-    setSelectedStop,
-  ] = useState(null);
-
-  const [
     fallback,
     setFallback,
   ] =
@@ -391,12 +384,6 @@ function Tracking({ setTab }) {
     setShowStops,
   ] =
     useState(true);
-
-const [
-    showDriverInfo,
-    setShowDriverInfo,
-  ] =
-    useState(false);
 
   /* =======================================================
      REFS
@@ -1889,353 +1876,7 @@ const [
               =============================================== */}
 
               {smoothPosition && (
-                <>
-                  <Marker
-                    position={
-                      smoothPosition
-                    }
-                    icon={
-                      getVehicleMarker()
-                    }
-                    onMouseOver={() =>
-                      setShowDriverInfo(
-                        true
-                      )
-                    }
-                    onClick={() =>
-                      setShowDriverInfo(
-                        (
-                          previous
-                        ) =>
-                          !previous
-                      )
-                    }
-                  />
-
-                  {/* ===========================================
-                      DRIVER INFO WINDOW
-                  =========================================== */}
-
-                  {showDriverInfo &&
-                    driver && (
-                      <InfoWindow
-                        position={
-                          smoothPosition
-                        }
-                        onCloseClick={() =>
-                          setShowDriverInfo(
-                            false
-                          )
-                        }
-                        options={{
-                          pixelOffset:
-                            window.google
-                              ? new window.google.maps.Size(
-                                  0,
-                                  -12
-                                )
-                              : undefined,
-                        }}
-                      >
-                        <div
-                          style={{
-                            minWidth:
-                              "180px",
-
-                            maxWidth:
-                              "220px",
-
-                            padding:
-                              "3px 2px 5px",
-
-                            fontFamily:
-                              "inherit",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display:
-                                "flex",
-
-                              alignItems:
-                                "center",
-
-                              gap:
-                                "9px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                width:
-                                  "40px",
-
-                                height:
-                                  "40px",
-
-                                flexShrink:
-                                  0,
-
-                                borderRadius:
-                                  "12px",
-
-                                overflow:
-                                  "hidden",
-
-                                background:
-                                  "#FFF0B8",
-
-                                border:
-                                  "1px solid #E8CD70",
-
-                                display:
-                                  "flex",
-
-                                alignItems:
-                                  "center",
-
-                                justifyContent:
-                                  "center",
-
-                                color:
-                                  "#B77D00",
-                              }}
-                            >
-                              {driver
-                                ?.profilePhoto ? (
-                                <img
-                                  src={
-                                    driver.profilePhoto
-                                  }
-                                  alt={
-                                    driver.name ||
-                                    "Driver"
-                                  }
-                                  style={{
-                                    width:
-                                      "100%",
-
-                                    height:
-                                      "100%",
-
-                                    objectFit:
-                                      "cover",
-                                  }}
-                                />
-                              ) : (
-                                <User
-                                  size={20}
-                                />
-                              )}
-                            </div>
-
-                            <div
-                              style={{
-                                minWidth:
-                                  0,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize:
-                                    "8px",
-
-                                  fontWeight:
-                                    700,
-
-                                  color:
-                                    "#B77D00",
-
-                                  textTransform:
-                                    "uppercase",
-
-                                  letterSpacing:
-                                    "0.7px",
-                                }}
-                              >
-                                Assigned Driver
-                              </div>
-
-                              <div
-                                style={{
-                                  marginTop:
-                                    "2px",
-
-                                  fontSize:
-                                    "13px",
-
-                                  fontWeight:
-                                    800,
-
-                                  color:
-                                    "#111111",
-                                }}
-                              >
-                                {driver.name ||
-                                  "Driver"}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div
-                            style={{
-                              marginTop:
-                                "9px",
-
-                              padding:
-                                "7px 8px",
-
-                              borderRadius:
-                                "10px",
-
-                              background:
-                                "#FFF9E8",
-
-                              border:
-                                "1px solid #F0DFA5",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display:
-                                  "flex",
-
-                                alignItems:
-                                  "center",
-
-                                gap:
-                                  "6px",
-                              }}
-                            >
-                              <Car
-                                size={13}
-                                color="#C88A00"
-                              />
-
-                              <span
-                                style={{
-                                  fontSize:
-                                    "10px",
-
-                                  fontWeight:
-                                    700,
-
-                                  color:
-                                    "#111111",
-                                }}
-                              >
-                                {driver
-                                  .vehicleNumber ||
-                                  "Vehicle unavailable"}
-                              </span>
-                            </div>
-
-                            {driver
-                              .vehicleType && (
-                              <div
-                                style={{
-                                  marginTop:
-                                    "3px",
-
-                                  marginLeft:
-                                    "19px",
-
-                                  fontSize:
-                                    "8px",
-
-                                  color:
-                                    "#71717A",
-                                }}
-                              >
-                                {
-                                  driver.vehicleType
-                                }
-                              </div>
-                            )}
-                          </div>
-
-                          {driver.phone && (
-                            <div
-                              style={{
-                                marginTop:
-                                  "7px",
-
-                                display:
-                                  "flex",
-
-                                alignItems:
-                                  "center",
-
-                                gap:
-                                  "6px",
-
-                                fontSize:
-                                  "9px",
-
-                                color:
-                                  "#52525B",
-                              }}
-                            >
-                              <Phone
-                                size={12}
-                                color="#C88A00"
-                              />
-
-                              {
-                                driver.phone
-                              }
-                            </div>
-                          )}
-
-                          <div
-                            style={{
-                              marginTop:
-                                "7px",
-
-                              display:
-                                "flex",
-
-                              alignItems:
-                                "center",
-
-                              gap:
-                                "5px",
-                            }}
-                          >
-                            <span
-                              style={{
-                                width:
-                                  "6px",
-
-                                height:
-                                  "6px",
-
-                                borderRadius:
-                                  "50%",
-
-                                background:
-                                  "#22C55E",
-                              }}
-                            />
-
-                            <span
-                              style={{
-                                fontSize:
-                                  "8px",
-
-                                fontWeight:
-                                  700,
-
-                                color:
-                                  "#16A34A",
-                              }}
-                            >
-                              Live location
-                            </span>
-                          </div>
-                        </div>
-                      </InfoWindow>
-                    )}
-                </>
+                <Marker position={smoothPosition} icon={getVehicleMarker()} title="Assigned driver" />
               )}
 
               {/* Ordered child stops: the parent's child gets a dark outlined pin. */}
@@ -2245,22 +1886,14 @@ const [
                 const childId = String(student.childId || student._id || "");
                 const isOwnStop = students.some((child) => String(child._id) === childId);
                 const activeStopIndex = orderedRouteStops.findIndex((stop) => String(stop.childId || stop._id) === childId);
-                const stopNumber = activeStopIndex >= 0 ? String(activeStopIndex + 1) : "✓";
-                const isSelected = String(selectedStop?.childId || selectedStop?._id || "") === childId;
-                return (
+                const stopNumber = activeStopIndex >= 0 ? String(activeStopIndex + 1) : "✓";                return (
                   <Fragment key={childId || student.stopOrder}>
                     <Marker
                       position={{ lat: Number(coords.lat), lng: Number(coords.lng) }}
                       icon={getCircleMarker(isOwnStop ? "#FFB400" : activeStopIndex >= 0 ? "#FFFFFF" : "#E7E5E4", isOwnStop ? "#111111" : "#D89C00", isOwnStop ? 10 : 8)}
-                      label={{ text: stopNumber, color: "#111111", fontWeight: "800", fontSize: "10px" }}
-                      onClick={() => setSelectedStop({ ...student, childId, coords, stopNumber, isOwnStop })}
+                      label={{ text: stopNumber, color: "#111111", fontWeight: "800", fontSize: "10px" }}                      title={isOwnStop ? "Your child’s stop" : `Stop ${stopNumber}`}
                     />
-                    {isSelected && <InfoWindow position={{ lat: Number(coords.lat), lng: Number(coords.lng) }} onCloseClick={() => setSelectedStop(null)}>
-                      <div style={{ padding: "3px 5px", fontFamily: "inherit", color: "#111111", fontSize: "12px", fontWeight: 700 }}>
-                        {isOwnStop ? "Your child's stop" : `Child stop ${stopNumber}`}
-                        <div style={{ marginTop: 3, color: "#77716A", fontSize: "11px", fontWeight: 500 }}>{student.status === "dropped" ? "Completed" : student.status === "absent" ? "Absent" : activeStopIndex >= 0 ? `Next in route: stop ${stopNumber}` : "Pickup completed"}</div>
-                      </div>
-                    </InfoWindow>}
+
                   </Fragment>
                 );
               })}
@@ -2276,6 +1909,7 @@ const [
                   }
                   options={{
                     preserveViewport: true,
+                    suppressInfoWindows: true,
                     suppressMarkers:
                       true,
 
