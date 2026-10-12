@@ -26,6 +26,7 @@ import OnboardingLayout from "./OnboardingLayout";
 
 function EmailVerificationStep({
   mode = "login",
+  reviewAccess = false,
 
   email = "",
 
@@ -456,9 +457,11 @@ function EmailVerificationStep({
       ? "Account Verification"
       : "Secure Login"
   }
-  title="Verify Your Email"
+  title={reviewAccess ? "Review Access" : "Verify Your Email"}
   subtitle={
-    mode === "register"
+    reviewAccess
+      ? "Enter the reusable 6-digit review code provided in Play Console."
+      : mode === "register"
       ? "Enter the 6-digit code sent to your email to finish creating your Parent account."
       : "Enter the 6-digit code sent to your registered email address."
   }
@@ -517,7 +520,7 @@ function EmailVerificationStep({
                 text-black
               "
             >
-              Check your inbox
+              {reviewAccess ? "Enter your review code" : "Check your inbox"}
             </h2>
 
             <p
@@ -529,7 +532,7 @@ function EmailVerificationStep({
                 text-zinc-500
               "
             >
-              We&apos;ve sent a 6-digit OTP to your email. The code is valid for 5 minutes.
+              {reviewAccess ? "Use the reusable code provided in Play Console. Email inbox access is not required." : "We’ve sent a 6-digit OTP to your email. The code is valid for 5 minutes."}
             </p>
           </div>
 
@@ -640,7 +643,7 @@ function EmailVerificationStep({
                   text-[#B97E00]
                 "
               >
-                Code sent to
+                {reviewAccess ? "Review account" : "Code sent to"}
               </p>
 
               <p
@@ -942,7 +945,7 @@ function EmailVerificationStep({
                   text-[#B97E00]
                 "
               >
-                Didn&apos;t get it?
+                {reviewAccess ? "Reusable review code" : "Didn’t get it?"}
               </p>
 
               <p
@@ -952,13 +955,14 @@ function EmailVerificationStep({
                   text-zinc-500
                 "
               >
-                You can request a new verification code.
+                {reviewAccess ? "Use the same review code for each sign-in." : "You can request a new verification code."}
               </p>
             </div>
 
             <button
               type="button"
               disabled={
+                reviewAccess ||
                 loading ||
                 resendLoading ||
                 resendSeconds > 0
@@ -985,7 +989,7 @@ function EmailVerificationStep({
                 disabled:opacity-50
               "
             >
-              {resendLoading ? (
+              {reviewAccess ? "Reusable" : resendLoading ? (
                 <>
                   <Loader2
                     size={14}

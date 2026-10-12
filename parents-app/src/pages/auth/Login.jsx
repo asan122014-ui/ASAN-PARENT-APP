@@ -24,6 +24,7 @@ import ParentRegistrationStep from "./onboarding/ParentRegistrationStep";
 ========================================================= */
 
 function Login() {
+  const [reviewAccess, setReviewAccess] = useState(false);
   const navigate =
     useNavigate();
 
@@ -361,12 +362,13 @@ function Login() {
           );
         }
 
-        await API.post(
+        const loginResponse = await API.post(
           "/parent-auth/send-login-otp",
           {
             email,
           }
         );
+        setReviewAccess(loginResponse.data?.reviewAccess === true);
 
         setLoginEmail(
           email
@@ -743,7 +745,7 @@ function Login() {
           true
         );
 
-        await API.post(
+        const loginResponse = await API.post(
           "/parent-auth/send-login-otp",
           {
             email:
@@ -752,6 +754,7 @@ function Login() {
               ),
           }
         );
+        setReviewAccess(loginResponse.data?.reviewAccess === true);
       } catch (
         err
       ) {
@@ -895,6 +898,7 @@ function Login() {
         "verify-login" && (
         <EmailVerificationStep
           mode="login"
+          reviewAccess={reviewAccess}
           email={
             loginEmail
           }
