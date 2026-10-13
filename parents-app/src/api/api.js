@@ -252,3 +252,17 @@ export {
   getAccessToken,
   clearAccessToken,
 };
+// Deduplicate overlapping reads from polling and live events without caching user data.
+const pendingReads = new Map();
+const originalGet = API.get.bind(API);
+API.get = (url, config = {}) => {
+  if (config.signal || config.cancelToken) return originalGet(url, config);
+  const key = JSON.stringify([url, config, localStorage.getItem("accessToken")]);
+  if (pendingReads.has(key)) return pendingReads.get(key);
+  const request = originalGet(url, config).then(
+    (response) => { pendingReads.delete(key); return response; },
+    (error) => { pendingReads.delete(key); throw error; }
+  );
+  pendingReads.set(key, request);
+  return request;
+};

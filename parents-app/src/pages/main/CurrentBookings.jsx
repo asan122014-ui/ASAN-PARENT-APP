@@ -42,7 +42,7 @@ function CurrentBookings() {
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => loadBookings(), 0);
-    const timer = window.setInterval(() => loadBookings(true), 15000);
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") loadBookings(true); }, 15000);
     return () => { window.clearTimeout(initialLoad); window.clearInterval(timer); };
   }, [loadBookings]);
 

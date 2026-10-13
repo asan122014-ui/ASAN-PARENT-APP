@@ -410,7 +410,7 @@ function Home({
 
           await API.get(
 
-            `/notifications/parent/${parentId}`
+            `/notifications/parent/${parentId}?countOnly=true`
 
           );
 
@@ -516,6 +516,8 @@ function Home({
 
         () => {
 
+          if (document.visibilityState !== "visible") return;
+
           fetchDashboard(
 
             parentId,
@@ -542,7 +544,7 @@ function Home({
 
         },
 
-        10000
+        30000
 
       );
 
@@ -656,19 +658,7 @@ function Home({
 
       async () => {
 
-        await fetchParentProfile(
-
-          parent._id
-
-        );
-
-
-
-        await fetchNotificationCount(
-
-          parent._id
-
-        );
+        await Promise.all([fetchParentProfile(parent._id), fetchNotificationCount(parent._id)]);
 
       }
 
@@ -682,19 +672,7 @@ function Home({
 
       async () => {
 
-        await fetchParentProfile(
-
-          parent._id
-
-        );
-
-
-
-        await fetchNotificationCount(
-
-          parent._id
-
-        );
+        await Promise.all([fetchParentProfile(parent._id), fetchNotificationCount(parent._id)]);
 
       }
 
