@@ -10,7 +10,8 @@ function getStatus(booking) {
   const status = booking.status;
   if (booking.driverRequestId?.matchingStatus === "Exhausted") return { title: "Driver search needs attention", detail: booking.driverRequestId?.rejectionReason || "We haven’t found an available driver yet.", tone: "amber" };
   if (status === "awaiting_driver") return { title: "Waiting for driver acceptance", detail: "Your request has been sent to your selected driver.", tone: "amber" };
-  if (status === "driver_searching") return { title: "Finding a driver", detail: "Your request is being matched with available drivers.", tone: "amber" };
+  if (status === "driver_searching" && booking.driverRequestId?.matchingStatus === "Offered") return { title: "Waiting for driver acceptance", detail: "The institute selected a driver. Your ride request is awaiting their response.", tone: "amber" };
+  if (status === "driver_searching") return { title: "Waiting for admin assignment", detail: "Your request is with the institute. An administrator will select a driver for your ride.", tone: "amber" };
   if (status === "driver_accepted" || status === "awaiting_payment") return { title: "Driver accepted", detail: `Driver ${booking.assignedDriverId || booking.driverRequestId?.assignedDriverId || "assigned"} accepted your request.`, tone: "green" };
   if (status === "active") return { title: "Service active", detail: `Your monthly ride service is in progress${booking.assignedDriverId ? ` with driver ${booking.assignedDriverId}` : ""}.`, tone: "green" };
   return { title: "Request received", detail: "Your booking request is being processed.", tone: "amber" };
