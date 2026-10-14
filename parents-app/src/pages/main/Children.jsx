@@ -2682,7 +2682,7 @@ function Children({
               </div>
               <div className="mt-4 grid gap-2">
                 {locationAccessAllowed && <div className="flex gap-2">
-                  <input aria-label="Developer access code" placeholder="Access code" value={locationAccessCode} onChange={(event) => setLocationAccessCode(event.target.value)} disabled={locationRequestLoading} autoComplete="off" className="min-w-0 flex-1 rounded-[13px] border border-[#E9D8B7] bg-white px-3 py-2 text-sm" />
+                  <input aria-label="Payment coupon" placeholder="Coupon code" value={locationAccessCode} onChange={(event) => setLocationAccessCode(event.target.value)} disabled={locationRequestLoading} autoComplete="off" className="min-w-0 flex-1 rounded-[13px] border border-[#E9D8B7] bg-white px-3 py-2 text-sm" />
                   <button type="button" onClick={applyLocationAccessCode} disabled={locationRequestLoading || !locationAccessCode.trim()} className="rounded-[13px] bg-[#FFB000] px-4 font-bold disabled:opacity-50">Apply</button>
                 </div>}
                 <button type="button" disabled={locationRequestLoading} onClick={payLocationAdjustment} className="h-11 rounded-[13px] bg-[#FFB000] font-extrabold text-black disabled:opacity-50">{locationRequestLoading ? "Please wait..." : `Pay ₹${Number(locationPaymentPreview.amountDue || 0).toFixed(2)} securely`}</button>

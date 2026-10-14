@@ -1,3 +1,4 @@
+import ParentPaymentCoupon from "../ParentPaymentCoupon";
 import { useState } from "react";
 
 import {
@@ -889,6 +890,8 @@ const InvoiceCard = ({
           </div>
         </div>
 
+        {canPayInvoice && <ParentPaymentCoupon endpoint={`/invoices/${invoice._id}/payment/coupon`} onApplied={onPaymentVerified} disabled={paying} />}
+        {invoice.couponAppliedAt && <p className="mt-2 text-sm font-bold text-green-700">Coupon applied - no payment collected.</p>}
         {canPayInvoice && (
           <div className="mb-2">
             <motion.button type="button" onClick={payInvoice} disabled={paying} whileTap={{ scale: 0.98 }} className="flex h-[49px] w-full items-center justify-center gap-2 rounded-[15px] bg-black px-4 text-[11px] font-extrabold text-white shadow-[0_7px_18px_rgba(0,0,0,0.12)] transition hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-60">

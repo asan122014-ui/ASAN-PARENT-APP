@@ -13,6 +13,7 @@ import {
 
 import { getInvoiceById } from "../../api/invoiceApi";
 import StatusBadge from "../../components/billing/StatusBadge";
+import ParentPaymentCoupon from "../../components/ParentPaymentCoupon";
 
 const InvoiceDetails = () => {
   const navigate = useNavigate();
@@ -287,6 +288,8 @@ const InvoiceDetails = () => {
       {/* ================= BOTTOM ACTIONS ================= */}
 
       <div className="fixed bottom-5 left-0 right-0 px-5 app-screen-width max-w-[475px] mx-auto">
+        {["Pending", "Overdue"].includes(invoice.status) && <ParentPaymentCoupon endpoint={`/invoices/${invoice._id}/payment/coupon`} onApplied={fetchInvoice} />}
+        {invoice.couponAppliedAt && <p className="mb-3 text-sm font-bold text-green-700">Coupon applied. No payment collected.</p>}
 
         <button
           onClick={() => {
