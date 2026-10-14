@@ -1901,7 +1901,7 @@ function Profile({
 
       {/* APP */}
 
-      <div className="relative z-10 mx-auto w-full max-w-[475px]">
+      <div className="relative z-10 mx-auto w-full app-screen-width max-w-[475px]">
 
         {/* HEADER */}
 
@@ -2209,7 +2209,7 @@ function Profile({
       {showPersonalInfo && (
         <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[#FFFEFB]">
 
-          <div className="relative mx-auto min-h-screen w-full max-w-[475px] bg-[#FFFEFB] pb-8">
+          <div className="relative mx-auto min-h-screen w-full app-screen-width max-w-[475px] bg-[#FFFEFB] pb-8">
 
             {/* HEADER */}
 
@@ -2460,7 +2460,7 @@ function Profile({
       {showMapPicker && (
         <div className="fixed inset-0 z-[10050] bg-[#FFFEFB]">
 
-          <div className="mx-auto flex h-[100dvh] w-full max-w-[475px] flex-col bg-[#FFFEFB]">
+          <div className="mx-auto flex h-[100dvh] w-full app-screen-width max-w-[475px] flex-col bg-[#FFFEFB]">
 
             {/* MAP HEADER */}
 

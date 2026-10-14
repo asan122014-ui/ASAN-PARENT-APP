@@ -286,7 +286,7 @@ const InvoiceDetails = () => {
 
       {/* ================= BOTTOM ACTIONS ================= */}
 
-      <div className="fixed bottom-5 left-0 right-0 px-5 max-w-[400px] mx-auto">
+      <div className="fixed bottom-5 left-0 right-0 px-5 app-screen-width max-w-[475px] mx-auto">
 
         <button
           onClick={() => {

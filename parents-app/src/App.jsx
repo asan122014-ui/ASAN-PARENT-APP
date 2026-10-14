@@ -128,6 +128,11 @@ const normalizePath = (
 const ONBOARDING_KEY = "asanrides_onboarding_completed";
 
 function App() {
+  useEffect(() => {
+    document.documentElement.classList.toggle("native-parent-app", Capacitor.isNativePlatform());
+    return () => document.documentElement.classList.remove("native-parent-app");
+  }, []);
+
   /* =======================================================
      ONBOARDING STATE
      Shows only once per installation.

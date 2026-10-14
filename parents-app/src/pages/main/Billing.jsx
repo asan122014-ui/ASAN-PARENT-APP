@@ -535,7 +535,7 @@ const Billing = () => {
           mx-auto
           min-h-screen
           w-full
-          max-w-[475px]
+          app-screen-width max-w-[475px]
         "
       >
         {/* =================================================

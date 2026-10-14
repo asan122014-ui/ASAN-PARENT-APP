@@ -2089,7 +2089,7 @@ function ParentRegistrationStep({
               flex
               h-full
               w-full
-              max-w-[475px]
+              app-screen-width max-w-[475px]
               flex-col
               bg-[#FFFEFB]
             "

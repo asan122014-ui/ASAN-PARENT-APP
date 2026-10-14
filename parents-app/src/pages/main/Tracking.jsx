@@ -8,7 +8,8 @@ import {
 
 import {
   GoogleMap,
-  Marker,  DirectionsRenderer,
+  Marker,
+  DirectionsRenderer,
   useJsApiLoader,
 } from "@react-google-maps/api";
 
@@ -1638,7 +1639,7 @@ function Tracking({ setTab }) {
           mx-auto
           min-h-screen
           w-full
-          max-w-[475px]
+          app-screen-width max-w-[475px]
         "
       >
         {/* =================================================
@@ -1886,12 +1887,14 @@ function Tracking({ setTab }) {
                 const childId = String(student.childId || student._id || "");
                 const isOwnStop = students.some((child) => String(child._id) === childId);
                 const activeStopIndex = orderedRouteStops.findIndex((stop) => String(stop.childId || stop._id) === childId);
-                const stopNumber = activeStopIndex >= 0 ? String(activeStopIndex + 1) : "✓";                return (
+                const stopNumber = activeStopIndex >= 0 ? String(activeStopIndex + 1) : "✓";
+                return (
                   <Fragment key={childId || student.stopOrder}>
                     <Marker
                       position={{ lat: Number(coords.lat), lng: Number(coords.lng) }}
                       icon={getCircleMarker(isOwnStop ? "#FFB400" : activeStopIndex >= 0 ? "#FFFFFF" : "#E7E5E4", isOwnStop ? "#111111" : "#D89C00", isOwnStop ? 10 : 8)}
-                      label={{ text: stopNumber, color: "#111111", fontWeight: "800", fontSize: "10px" }}                      title={isOwnStop ? "Your child’s stop" : `Stop ${stopNumber}`}
+                      label={{ text: stopNumber, color: "#111111", fontWeight: "800", fontSize: "10px" }}
+                      title={isOwnStop ? "Your child’s stop" : `Stop ${stopNumber}`}
                     />
 
                   </Fragment>

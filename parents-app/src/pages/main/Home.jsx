@@ -1996,7 +1996,7 @@ function Home({
 
           w-full
 
-          max-w-[475px]
+          app-screen-width max-w-[475px]
 
         "
 

@@ -127,7 +127,7 @@ function BookRide() {
   const inputClass = "mt-1 h-12 w-full rounded-[15px] border border-[#E8D7A5] bg-white px-4 text-sm outline-none focus:border-[#FFB400] focus:ring-4 focus:ring-[#FFB400]/10";
   if (mapMode) return <MapPicker onBack={() => setMapMode(null)} onConfirm={(place) => { setRoute((current) => { const nextPoint = { lat: place.latitude, lng: place.longitude }; const next = mapMode === "pickup" ? { ...current, pickup: place.address, pickupCoordinates: nextPoint } : { ...current, dropoff: place.address, dropoffCoordinates: nextPoint }; return { ...next, distanceMeters: null, distanceKm: "", durationMinutes: "" }; }); setMapMode(null); }} />;
   return <main className="min-h-screen bg-[#FFF9EE] px-4 py-5 text-black">
-    <div className="mx-auto max-w-[430px]">
+    <div className="mx-auto app-screen-width max-w-[430px]">
       <button onClick={() => navigate("/app")} className="mb-5 flex items-center gap-2 text-xs font-bold text-[#9A6A00]"><ArrowLeft size={16}/> Back to dashboard</button>
       <div className="relative mb-6 overflow-hidden rounded-[25px] border border-[#EBDCA9] bg-gradient-to-br from-white via-[#FFFDF8] to-[#FFF1C8] p-5 shadow-[0_14px_36px_rgba(101,76,17,0.08)]">
         <div className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-[#FFE39A]/50 blur-2xl" />

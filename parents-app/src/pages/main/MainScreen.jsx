@@ -1010,7 +1010,7 @@ function MainScreen() {
       <div
         className="
           w-full
-          max-w-[400px]
+          app-screen-width max-w-[475px]
           overflow-hidden
         "
       >

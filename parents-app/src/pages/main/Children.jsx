@@ -1835,7 +1835,7 @@ function Children({
             className="
               min-h-screen
               w-full
-              max-w-[475px]
+              app-screen-width max-w-[475px]
               pb-6
             "
           >
@@ -2815,7 +2815,7 @@ function Children({
             relative
             z-10
             w-full
-            max-w-[475px]
+            app-screen-width max-w-[475px]
           "
         >
           {/* =================================================

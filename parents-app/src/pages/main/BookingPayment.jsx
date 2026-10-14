@@ -128,7 +128,7 @@ export default function BookingPayment() {
     : Number(change.remainingServiceDays) > 0
       ? Number(change.distanceChargeDue || 0) / Number(change.remainingServiceDays)
       : 0;
-  return <main className="min-h-screen bg-[#FFF9EE] px-4 py-6 text-black"><div className="mx-auto max-w-[430px]">
+  return <main className="min-h-screen bg-[#FFF9EE] px-4 py-6 text-black"><div className="mx-auto app-screen-width max-w-[430px]">
     <Link to="/app" className="mb-5 inline-flex items-center gap-2 text-xs font-bold text-[#9A6A00]"><ArrowLeft size={16}/> Back to dashboard</Link>
     <header className="rounded-[25px] border border-[#EBDCA9] bg-gradient-to-br from-white to-[#FFF1C8] p-6">
       <p className="text-[9px] font-extrabold uppercase tracking-[2px] text-[#B77D00]">Your monthly ride</p>

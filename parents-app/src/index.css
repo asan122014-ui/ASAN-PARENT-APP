@@ -457,3 +457,8 @@ body {
   background:
     #ffe19a;
 }
+/* Full-width phone screens; preserve centred layouts on desktop browsers. */
+@media (max-width: 767px) {
+  .app-screen-width { width: 100%; max-width: 100%; }
+}
+.native-parent-app .app-screen-width { width: 100%; max-width: 100%; }

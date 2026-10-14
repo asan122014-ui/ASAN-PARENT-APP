@@ -92,7 +92,7 @@ function BottomNav({
         left-1/2
         z-[100]
         w-full
-        max-w-[475px]
+        app-screen-width max-w-[475px]
         -translate-x-1/2
         px-3
       "

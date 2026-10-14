@@ -168,7 +168,7 @@ function OnboardingLayout({
           flex
           min-h-screen
           w-full
-          max-w-[475px]
+          app-screen-width max-w-[475px]
           flex-col
           px-4
           pb-[max(30px,env(safe-area-inset-bottom))]
