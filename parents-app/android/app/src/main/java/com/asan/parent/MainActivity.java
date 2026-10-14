@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 import com.getcapacitor.BridgeActivity;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,13 @@ public class MainActivity extends BridgeActivity {
         // legacy full-screen rectangular splash screen via windowBackground.
 
         super.onCreate(savedInstanceState);
+        WindowCompat.enableEdgeToEdge(getWindow());
+        // Capacitor SystemBars handles bars, cutouts and keyboard insets once.
+        // Keep the normal viewport; do not duplicate native padding in the webpage.
+        WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+                .setAppearanceLightStatusBars(true);
+        WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+                .setAppearanceLightNavigationBars(true);
         checkAndRequestPermissions();
     }
 

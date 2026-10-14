@@ -1,5 +1,11 @@
 {
   "appId": "com.parents.app",
   "appName": "ASAN",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "SystemBars": {
+      "style": "LIGHT",
+      "insetsHandling": "css"
+    }
+  }
 }
