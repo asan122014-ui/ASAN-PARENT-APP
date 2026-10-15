@@ -17,7 +17,7 @@ function getStatus(booking) {
   return { title: "Request received", detail: "Your booking request is being processed.", tone: "amber" };
 }
 
-function CurrentBookings() {
+function CurrentBookings({ onBookingsChange } = {}) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,6 +32,7 @@ function CurrentBookings() {
       const response = await API.get("/bookings/mine");
       const current = (response.data?.data || []).filter((booking) => openBookingStatuses.has(booking.status));
       setBookings(current);
+      onBookingsChange?.(current);
       setError("");
     } catch (requestError) {
       setError(requestError?.response?.data?.message || "Unable to load your booking status.");
@@ -39,7 +40,7 @@ function CurrentBookings() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [onBookingsChange]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => loadBookings(), 0);

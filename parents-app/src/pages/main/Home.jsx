@@ -90,6 +90,8 @@ function Home({
 
 }) {
 
+  const [bookingOverview, setBookingOverview] = useState(null);
+
   /* =======================================================
 
      STATE
@@ -2615,6 +2617,15 @@ function Home({
                 );
               })}
             </div>
+          ) : !hasAssignedDriver && (!bookingOverview || bookingOverview.length === 0) ? (
+            <section className="rounded-[25px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_32px_rgba(101,76,17,0.06)]" aria-label="Ride overview">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[#FFF1C8] text-[#B77D00]"><Car size={21} /></span>
+                <p className="text-[11px] font-extrabold uppercase tracking-[1.4px] text-[#9A6A00]">Family rides</p>
+              </div>
+              <h3 className="mt-4 text-[21px] font-extrabold leading-snug tracking-[-0.4px] text-black">Your child’s next ride starts here</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">Book a school ride to get started. Your ride details will appear here once your booking is confirmed.</p>
+            </section>
           ) : (
           <motion.button
 
@@ -3947,7 +3958,7 @@ function Home({
           </motion.button>
           )}
 
-          <CurrentBookings />
+          <CurrentBookings onBookingsChange={setBookingOverview} />
 
         </main>
 
