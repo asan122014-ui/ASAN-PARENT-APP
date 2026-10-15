@@ -1,3 +1,4 @@
+import { previousBookingDetails } from "../../utils/previousBooking";
 import { createElement, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, MapPin, Clock3, Route as RouteIcon, UserRound, Search, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +35,27 @@ function BookRide() {
   const [requestDelivery, setRequestDelivery] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState("");
+
+  const [previousDetailsLoading, setPreviousDetailsLoading] = useState(true);
+  const [previousDetailsMessage, setPreviousDetailsMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    API.get("/bookings/mine").then((response) => {
+      if (!active) return;
+      const saved = previousBookingDetails(response.data?.data);
+      if (!saved) return;
+      setChildren(saved.children.map((child) => ({ ...emptyChild, ...child })));
+      setSchool(saved.school);
+      setRoute(saved.route);
+      setVehicleType(saved.vehicleType);
+      setDriverChoice(saved.driverChoice);
+      if (saved.driverId) setDriverId(saved.driverId);
+      setPreviousDetailsMessage("Your previous booking details are filled in. Review and change anything before continuing. A new price will be calculated.");
+    }).catch(() => {
+      if (active) setPreviousDetailsMessage("We couldn’t load your previous booking details. You can still enter them below.");
+    }).finally(() => { if (active) setPreviousDetailsLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const pickupCoordinates = route.pickupCoordinates;
@@ -153,7 +175,9 @@ function BookRide() {
           </div>
         </div>
       </div>
-      {step === 1 && <form onSubmit={getQuote} className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="My Children" />
+      {step === 1 && previousDetailsLoading && <p role="status" className="mb-4 rounded-xl bg-[#FFF1C8] p-4 text-sm text-[#8A6100]">Loading your saved booking details…</p>}
+      {step === 1 && previousDetailsMessage && <p role="status" className="mb-4 rounded-xl border border-[#EBDCA9] bg-[#FFF9EE] p-4 text-sm leading-6 text-[#8A6100]">{previousDetailsMessage}</p>}
+      {step === 1 && !previousDetailsLoading && <form onSubmit={getQuote} className="rounded-[24px] border border-[#EBDCA9] bg-white p-5 shadow-[0_12px_35px_rgba(101,76,17,0.07)]"><SectionTitle icon={UserRound} title="My Children" />
         <p className="-mt-2 mb-4 text-[10px] leading-4 text-zinc-500">Add every child who will use this shared monthly route. The price updates for the total number of children.</p>
         <div className="space-y-3">
           {children.map((item, index) => <div key={index} className="rounded-[18px] border border-[#EFE4D0] bg-[#FFFDF8] p-3">
