@@ -3022,42 +3022,9 @@ function Children({
                     text-zinc-500
                   "
                 >
-                  Add your child to
-                  manage their school
-                  transportation details.
+                  To add your child and manage their school rides, use Book a ride from the Home screen.
                 </p>
 
-                <button
-                  type="button"
-                  onClick={
-                    openAddChild
-                  }
-                  className="
-                    mt-6
-                    inline-flex
-                    h-[48px]
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-[14px]
-                    bg-[#FFB000]
-                    px-6
-                    font-bold
-                    text-black
-                    transition
-                    hover:bg-[#F4A900]
-                    active:scale-[0.98]
-                  "
-                >
-                  <Plus
-                    size={18}
-                    className="
-                      text-[#8B6200]
-                    "
-                  />
-
-                  Add Child
-                </button>
               </div>
             ) : (
               <div
