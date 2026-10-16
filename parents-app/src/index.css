@@ -462,3 +462,17 @@ body {
   .app-screen-width { width: 100%; max-width: 100%; }
 }
 .native-parent-app .app-screen-width { width: 100%; max-width: 100%; }
+
+/* Readable phone text and touch targets, including larger system text settings. */
+@media (max-width: 900px) {
+  :is(.text-\[6px\], .text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\]) { font-size: .75rem; line-height: 1.5; }
+  .text-\[11px\] { font-size: .875rem; line-height: 1.5; }
+  :is(input, select, textarea) { font-size: 16px !important; min-height: 44px; max-width: 100%; }
+  :is(button, a[role="button"]) { touch-action: manipulation; }
+  button:not(.react-calendar__tile) { min-height: 44px; }
+  :is(h1, h2, h3, p, label) { overflow-wrap: anywhere; }
+  :is(button, input, select, textarea, a):focus-visible { outline: 3px solid #946900; outline-offset: 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

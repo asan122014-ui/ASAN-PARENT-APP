@@ -1,3 +1,4 @@
+import { paymentPresentation } from "../../utils/paymentPresentation";
 import ParentPaymentCoupon from "../../components/ParentPaymentCoupon";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -24,6 +25,7 @@ export default function BookingPayment() {
   const [details, setDetails] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checkoutState, setCheckoutState] = useState("");
   const [checking, setChecking] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -69,7 +71,7 @@ export default function BookingPayment() {
   }, [hasOrder, paid, refresh]);
   const pay = async () => {
     let opened = false;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setCheckoutState("");
     try {
       const Razorpay = await loadRazorpay();
       const response = await API.post(`/booking-payments/${id}/order`);
@@ -94,10 +96,11 @@ export default function BookingPayment() {
             setError(err.response?.data?.message || "Payment could not be confirmed yet. Check payment status before retrying.");
           } finally { setBusy(false); }
         },
-        modal: { ondismiss: () => { setBusy(false); if (!completed && !failed) setError("Payment window closed. No new payment was confirmed."); } },
+        modal: { ondismiss: () => { setBusy(false); if (!completed && !failed) setCheckoutState("closed"); } },
       });
       checkout.on("payment.failed", (event) => {
         failed = true;
+        setCheckoutState("failed");
         setBusy(false);
         setError(event.error?.description || "Payment failed. Please try again.");
       });
@@ -110,6 +113,7 @@ export default function BookingPayment() {
   const payment = details?.payment;
   const monthlyRide = details?.monthlyRide;
   const monthlyQuote = monthlyRide?.quote || booking?.quote;
+  const paymentState = paymentPresentation(payment, checkoutState);
   const cancelled = booking?.status === "cancelled";
   const canCancel = booking?.status === "awaiting_payment" && !paid && !cancelling && !busy && !checking;
   const cancelBooking = async () => {
@@ -157,8 +161,9 @@ export default function BookingPayment() {
       {paid && details.locationPayments?.length > 0 && <div className="mt-4 rounded-[17px] border border-[#EBDCA9] bg-white p-4"><h3 className="text-sm font-extrabold text-black">Location change payments</h3><p className="mt-1 text-[10px] text-zinc-500">Additional payments made after your monthly ride payment.</p><div className="mt-3 space-y-3">{details.locationPayments.map((change) => <article key={change.paymentId} className="rounded-[14px] bg-[#FFF9EE] p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-extrabold text-black">{change.locationType === "both" ? "Home and school" : change.locationType === "both" ? "Home and school" : change.locationType === "home" ? "Home" : "School"} location updated</p><p className="mt-1 text-[10px] text-zinc-500">Paid {date(change.paidAt)} · Route {Number(change.oldDistanceKm || 0).toFixed(2)} km → {Number(change.newDistanceKm || 0).toFixed(2)} km</p></div><strong className="shrink-0 text-sm text-[#35764B]">₹{money(change.amountDue)}</strong></div><div className="mt-3 space-y-1.5 border-t border-[#EBDCA9] pt-2 text-[11px] text-zinc-600"><div><div className="flex justify-between gap-3"><span>Additional distance charge ({Number(change.addedDistanceKm || 0).toFixed(2)} km)</span><strong className="text-black">₹{money(change.distanceChargeDue)}</strong></div><p className="mt-0.5 text-[10px] text-zinc-500">₹{money(adjustmentDailyCharge(change))} per day × {Number(change.remainingServiceDays || 0).toFixed(1)} remaining service days</p></div><div className="flex justify-between gap-3"><span>Platform fee (2%)</span><strong className="text-black">₹{money(change.platformFeeDue)}</strong></div><div className="flex justify-between gap-3 font-bold text-black"><span>Amount paid for location change</span><span>₹{money(change.amountDue)}</span></div><p className="break-all pt-1 text-[9px] text-zinc-500">Payment reference: {change.paymentId}</p><p className="pt-1 text-[10px] text-zinc-500">New monthly price from next billing cycle: ₹{money(change.newMonthlyPrice)}</p></div></article>)}</div></div>}
       {cancelled ? <div role="status" className={`mt-4 rounded-[16px] p-4 text-xs leading-6 ${payment?.status === "REFUNDED" ? "bg-[#EAF5ED] text-[#35764B]" : "bg-[#FFF9EE] text-[#725B2A]"}`}><b>{payment?.status === "REFUNDED" ? "Payment refunded" : payment?.status === "REFUNDING" ? "Refund processing" : payment?.status === "REFUND_FAILED" ? "Refund needs attention" : "Booking cancelled"}</b><p>{payment?.status === "REFUNDED" ? "A payment completed at the time of cancellation has been refunded." : payment?.status === "REFUNDING" ? "A payment completed at the time of cancellation; the refund is being processed." : payment?.status === "REFUND_FAILED" ? "Please contact support so the payment can be refunded." : "No ride service will start for this booking."}</p><Link to="/app" className="mt-3 inline-flex font-extrabold underline">Return to dashboard</Link></div> : paid ? <div className="mt-4 rounded-[16px] bg-[#EAF5ED] p-4 text-xs leading-6 text-[#35764B]"><b>{booking.status === "expired" ? "Service ended" : "Service active"}</b><p>{date(booking.serviceStartsAt)} – {date(booking.serviceEndsAt)}</p><p className="break-all">{waived ? "Coupon" : "Payment reference"}: {waived ? booking.couponCode : payment?.paymentId}</p><p>{waived ? "Applied" : "Paid"} on {date(waived ? booking.couponAppliedAt : payment?.paidAt)}</p></div> : <>
         {payment && <p role="status" className="mt-4 text-xs text-[#8A6100]">{payment.status === "FAILED" ? "Your last attempt was not completed. You can try again." : ["EXPIRED", "TERMINATED"].includes(payment.status) ? "The checkout session expired. You can start a new attempt." : "Waiting for payment confirmation. Use Check payment status if you have already paid."}</p>}
+        {paymentState && <div role="status" className="mt-4 rounded-xl border border-[#EBDCA9] bg-[#FFF9EE] p-4 text-sm leading-6"><strong>{paymentState.title}</strong><p>{paymentState.detail}</p></div>}
         {booking.status === "awaiting_payment" && <ParentPaymentCoupon endpoint={`/booking-payments/${id}/coupon`} onApplied={() => refresh()} disabled={busy || checking} />}
-        {booking.status === "awaiting_payment" && <button onClick={pay} disabled={busy || checking || payment?.status === "PENDING"} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[15px] bg-[#FFB400] font-extrabold disabled:opacity-50">{busy && <LoaderCircle size={17} className="animate-spin"/>}{busy ? "Opening checkout…" : "Pay securely"}</button>}
+        {booking.status === "awaiting_payment" && <button onClick={pay} disabled={busy || checking || paymentState?.blocked} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[15px] bg-[#FFB400] font-extrabold disabled:opacity-50">{busy && <LoaderCircle size={17} className="animate-spin"/>}{busy ? "Opening checkout…" : "Pay securely"}</button>}
         {hasOrder && <button onClick={() => refresh(true)} disabled={checking || busy} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[15px] border border-[#EBDCA9] text-xs font-bold disabled:opacity-50"><RefreshCw size={14} className={checking ? "animate-spin" : ""}/>Check payment status</button>}
         {canCancel && (confirmCancel ? <div className="mt-4 rounded-[15px] border border-[#F0D9D5] bg-[#FFF7F5] p-4"><p className="text-xs font-extrabold text-[#7C342D]">Cancel this booking?</p><p className="mt-1 text-[11px] leading-5 text-[#8C625B]">This cancels the booking and payment access. If a payment completes at the same time, it will be refunded.</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling} className="h-10 flex-1 rounded-xl border border-[#E7D9D6] bg-white text-xs font-bold">Keep booking</button><button type="button" onClick={cancelBooking} disabled={cancelling} className="h-10 flex-1 rounded-xl bg-[#B83E32] text-xs font-extrabold text-white disabled:opacity-50">{cancelling ? "Cancelling…" : "Confirm cancel"}</button></div></div> : <button type="button" onClick={() => setConfirmCancel(true)} className="mt-4 h-10 w-full rounded-[13px] border border-[#E7D9D6] bg-white text-xs font-bold text-[#8D4B43]">Cancel booking</button>)}
       </>}

@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import {
   useCallback,
   useEffect,
@@ -55,12 +56,16 @@ const isValidTab = (
 ========================================================= */
 
 function MainScreen() {
+  const routeLocation = useLocation();
+  useEffect(() => { const requested = new URLSearchParams(routeLocation.search).get("tab"); if (isValidTab(requested)) setTab(requested); }, [routeLocation.search]);
   /* =======================================================
      INITIAL TAB
   ======================================================= */
 
   const getInitialTab =
     () => {
+      const requestedTab = new URLSearchParams(window.location.search).get("tab");
+      if (isValidTab(requestedTab)) return requestedTab;
       const savedTab =
         localStorage.getItem(
           "activeTab"

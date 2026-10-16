@@ -21,13 +21,14 @@ public class MainActivity extends BridgeActivity {
 
         super.onCreate(savedInstanceState);
         WindowCompat.enableEdgeToEdge(getWindow());
+        SafeWindowInsets.install((android.view.View) getBridge().getWebView().getParent());
         // Capacitor SystemBars handles bars, cutouts and keyboard insets once.
         // Keep the normal viewport; do not duplicate native padding in the webpage.
         WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
                 .setAppearanceLightStatusBars(true);
         WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
                 .setAppearanceLightNavigationBars(true);
-        checkAndRequestPermissions();
+        // Feature APIs request only the permissions needed for the current action.
     }
 
     private void checkAndRequestPermissions() {

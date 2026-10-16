@@ -1378,11 +1378,7 @@ function NotificationItem({
   return (
     <motion.button
       type="button"
-      onClick={() =>
-        markAsRead(
-          notification._id
-        )
-      }
+      onClick={async () => { await markAsRead(notification._id); window.dispatchEvent(new CustomEvent("asan:notification-click", { detail: notification })); }}
       initial={{
         opacity: 0,
         y: 7,

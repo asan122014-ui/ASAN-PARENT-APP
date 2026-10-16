@@ -1,3 +1,4 @@
+import { bookingStatus as getStatus } from "../../utils/bookingStatus";
 import { Link } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import { API } from "../../api/api";
@@ -5,17 +6,6 @@ import { AlertCircle, CheckCircle2, Clock3, RefreshCw, Route, X } from "lucide-r
 
 const openBookingStatuses = new Set(["quoted", "awaiting_driver", "driver_searching", "driver_accepted", "awaiting_payment", "active"]);
 const canCancelStatuses = new Set(["awaiting_driver", "driver_searching", "awaiting_payment"]);
-
-function getStatus(booking) {
-  const status = booking.status;
-  if (booking.driverRequestId?.matchingStatus === "Exhausted") return { title: "Driver search needs attention", detail: booking.driverRequestId?.rejectionReason || "We haven’t found an available driver yet.", tone: "amber" };
-  if (status === "awaiting_driver") return { title: "Waiting for driver acceptance", detail: "Your request has been sent to your selected driver.", tone: "amber" };
-  if (status === "driver_searching" && booking.driverRequestId?.matchingStatus === "Offered") return { title: "Waiting for driver acceptance", detail: "The institute selected a driver. Your ride request is awaiting their response.", tone: "amber" };
-  if (status === "driver_searching") return { title: "Waiting for admin assignment", detail: "Your request is with the institute. An administrator will select a driver for your ride.", tone: "amber" };
-  if (status === "driver_accepted" || status === "awaiting_payment") return { title: "Driver accepted", detail: `Driver ${booking.assignedDriverId || booking.driverRequestId?.assignedDriverId || "assigned"} accepted your request.`, tone: "green" };
-  if (status === "active") return { title: "Service active", detail: `Your monthly ride service is in progress${booking.assignedDriverId ? ` with driver ${booking.assignedDriverId}` : ""}.`, tone: "green" };
-  return { title: "Request received", detail: "Your booking request is being processed.", tone: "amber" };
-}
 
 function CurrentBookings({ onBookingsChange } = {}) {
   const [bookings, setBookings] = useState([]);
@@ -81,6 +71,8 @@ function CurrentBookings({ onBookingsChange } = {}) {
 
       {loading ? (
         <div className="mt-4 flex items-center gap-2 rounded-[17px] bg-[#FFF9EE] p-4 text-[11px] text-[#817669]"><RefreshCw size={14} className="animate-spin" /> Loading your booking status…</div>
+      ) : error && bookings.length === 0 ? (
+        <button type="button" onClick={() => loadBookings()} className="mt-4 min-h-11 w-full rounded-xl border border-[#EBDCA9] px-4 text-sm font-bold">Retry loading bookings</button>
       ) : bookings.length === 0 ? (
         <div className="mt-4 rounded-[17px] bg-[#FFF9EE] p-4 text-center">
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF1C8] text-[#B77D00]"><Route size={18} /></div>
@@ -98,7 +90,7 @@ function CurrentBookings({ onBookingsChange } = {}) {
               <article key={booking._id} className="overflow-hidden rounded-[19px] border border-[#EFE4D0] bg-[#FFFDF8]">
                 <div className="h-1 bg-[#FFB400]" />
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[8px] font-extrabold uppercase tracking-[1.3px] text-[#95897C]">{childNames || "Child ride"}</p>
                       <h3 className="mt-1 truncate text-[13px] font-extrabold text-black">{child.school || "School route"}</h3>

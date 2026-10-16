@@ -1,3 +1,6 @@
+import { API } from "./api/api";
+import ConnectionNotice from "./components/ConnectionNotice";
+import NotificationAccess, { requestExplainedPushPermission, requestExplainedWebPermission } from "./components/NotificationAccess";
 import {
   useEffect,
   useRef,
@@ -486,8 +489,7 @@ function App() {
               "prompt"
             ) {
               permission =
-                await PushNotifications
-                  .requestPermissions();
+                await requestExplainedPushPermission(PushNotifications);
             }
 
             if (
@@ -672,6 +674,7 @@ function App() {
         ================================================= */
 
         try {
+          if (await requestExplainedWebPermission() !== "granted") return;
           const token =
             await generateToken();
 
@@ -1049,7 +1052,7 @@ function App() {
   }
 
   return (
-    <AppRoutes />
+    <><ConnectionNotice /><NotificationAccess role="parent" readNotification={(id) => API.put(`/notifications/${id}/read`)} /><AppRoutes /></>
   );
 }
 

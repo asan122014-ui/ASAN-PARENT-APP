@@ -1,3 +1,4 @@
+import { bookingStatus as getBookingStatus } from "../../utils/bookingStatus";
 import {
 
   useEffect,
@@ -1006,17 +1007,7 @@ function Home({
 
 
 
-        setNotificationCount(
-
-          (
-
-            previous
-
-          ) =>
-
-            previous + 1
-
-        );
+        await fetchNotificationCount(parent._id);
 
 
 
@@ -1732,7 +1723,7 @@ function Home({
 
       : !hasAssignedDriver
 
-        ? "No Driver Assigned Yet"
+        ? getBookingStatus(bookingOverview?.[0] || {}).title
 
         : displayTrip
 
@@ -1758,7 +1749,7 @@ function Home({
 
     !hasAssignedDriver
 
-      ? "We're currently finding a suitable driver for you. You'll be notified as soon as a driver is assigned."
+      ? getBookingStatus(bookingOverview?.[0] || {}).detail
 
       : activeTrip
 
@@ -3812,142 +3803,6 @@ function Home({
                     }
 
                   />
-
-                </div>
-
-              )}
-
-
-
-              {/* NO DRIVER WAITING PANEL */}
-
-
-
-              {!loading &&
-
-                !hasAssignedDriver && (
-
-                <div
-
-                  className="
-
-                    mt-5
-
-                    rounded-[22px]
-
-                    border
-
-                    border-[#F0D996]
-
-                    bg-[#FFF8E5]
-
-                    px-4
-
-                    py-4
-
-                  "
-
-                >
-
-                  <div
-
-                    className="
-
-                      flex
-
-                      items-start
-
-                      gap-3
-
-                    "
-
-                  >
-
-                    <div
-
-                      className="
-
-                        flex
-
-                        h-[40px]
-
-                        w-[40px]
-
-                        shrink-0
-
-                        items-center
-
-                        justify-center
-
-                        rounded-[13px]
-
-                        bg-[#FFB400]
-
-                        text-black
-
-                      "
-
-                    >
-
-                      <Car
-
-                        size={18}
-
-                      />
-
-                    </div>
-
-
-
-                    <div>
-
-                      <p
-
-                        className="
-
-                          text-[10px]
-
-                          font-extrabold
-
-                          text-black
-
-                        "
-
-                      >
-
-                        Driver assignment in progress
-
-                      </p>
-
-
-
-                      <p
-
-                        className="
-
-                          mt-1
-
-                          text-[9px]
-
-                          leading-4
-
-                          text-zinc-500
-
-                        "
-
-                      >
-
-                        No action is required from you.
-
-                        We'll notify you once your driver
-
-                        has been assigned.
-
-                      </p>
-
-                    </div>
-
-                  </div>
 
                 </div>
 
