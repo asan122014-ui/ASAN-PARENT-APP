@@ -154,6 +154,7 @@ const Billing = () => {
         setInvoices(
           sorted
         );
+        if (parent.accountSource === 'institute') { setPaidBookings([]); setPendingBookings([]); setPaidLocationChanges([]); return; }
 
         try {
           const bookingResponse = await API.get("/bookings/mine");

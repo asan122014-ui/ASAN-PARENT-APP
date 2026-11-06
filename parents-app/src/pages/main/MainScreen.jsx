@@ -894,7 +894,7 @@ function MainScreen() {
     ),
 
     billing: (
-      instituteManaged ? <InstituteTransport setTab={changeTab} /> : <Billing
+      <Billing
         setTab={
           changeTab
         }

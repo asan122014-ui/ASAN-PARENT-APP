@@ -228,6 +228,7 @@ const InvoiceDetails = () => {
             }
           />
 
+          {invoice.billingSource === 'institute_fixed' ? <Item icon={Route} title="Assigned Route" value={invoice.routeName || '--'} /> : <>
           <Item
             icon={CalendarDays}
             title="Completed Days"
@@ -246,9 +247,11 @@ const InvoiceDetails = () => {
             value={`₹${invoice.ratePerKm}`}
           />
 
+          </>}
+
           <Item
             icon={IndianRupee}
-            title="Base Amount"
+            title={invoice.billingSource === 'institute_fixed' ? 'Fixed monthly transport fee' : 'Base Amount'}
             value={`₹${Number(
               invoice.baseAmount || 0
             ).toFixed(2)}`}
