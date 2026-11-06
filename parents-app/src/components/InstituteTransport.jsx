@@ -1,0 +1,20 @@
+import { useEffect, useState } from 'react';
+import { API } from '../api/api';
+export default function InstituteTransport({ setTab }) {
+  const [data, setData] = useState(null), [error, setError] = useState('');
+  const load = async () => {
+    setError('');
+    try { setData((await API.get('/institute-app/parent')).data); }
+    catch (error) { setError(error.response?.data?.message || 'Unable to load your Institute transport.'); }
+  };
+  useEffect(() => { load(); const timer = setInterval(load, 30000); return () => clearInterval(timer); }, []);
+  const navigate = tab => setTab ? setTab(tab) : window.location.assign(`/app?tab=${tab}`);
+  return <main className="min-h-screen bg-[#FFF9ED] px-4 pb-28 pt-8 text-[#1C1917]"><div className="mx-auto max-w-2xl space-y-5">
+    <header className="rounded-3xl border border-amber-200 bg-gradient-to-br from-white to-amber-100 p-6"><p className="text-sm font-bold uppercase tracking-widest text-amber-800">Institute transport</p><h1 className="mt-3 text-2xl font-extrabold">{data?.instituteName || 'Your children’s transport'}</h1><p className="mt-3 text-sm leading-6 text-stone-600">Your Institute manages your children, driver assignments and routes. Contact your transport coordinator to request changes.</p></header>
+    <nav className="flex flex-wrap gap-3" aria-label="Institute account"><button className="min-h-11 rounded-xl border bg-white px-4 font-bold" onClick={() => navigate('notifications')}>Notifications</button><button className="min-h-11 rounded-xl border bg-white px-4 font-bold" onClick={() => navigate('trips')}>Ride history</button><button className="min-h-11 rounded-xl border bg-white px-4 font-bold" onClick={() => navigate('profile')}>My account</button></nav>
+    {error && <div role="alert" className="rounded-xl bg-red-50 p-4"><p>{error}</p><button onClick={load} className="mt-2 min-h-11 font-bold underline">Retry</button></div>}
+    {!data && !error && <p role="status">Loading your transport…</p>}
+    {data?.children?.length === 0 && <section className="rounded-3xl border bg-white p-6"><h2 className="text-xl font-bold">Your Institute is setting things up</h2><p className="mt-2 leading-6 text-stone-600">Your child and assigned driver will appear here when your transport coordinator adds them.</p></section>}
+    {data?.children?.map(child => { const driver = data.drivers.find(item => item.driverId === child.driverId); return <article key={child._id} className="rounded-3xl border border-amber-200 bg-white p-6"><p className="text-sm text-stone-500">{child.instituteReference} · {child.grade}</p><h2 className="mt-1 text-2xl font-bold">{child.name}</h2><dl className="mt-4 space-y-3 text-sm"><div><dt className="font-bold">Pickup</dt><dd className="mt-1 leading-6 text-stone-600">{child.pickupLocation} · {child.pickupTime}</dd></div><div><dt className="font-bold">School return</dt><dd className="mt-1 text-stone-600">{child.eveningPickup || 'To be confirmed'}</dd></div><div><dt className="font-bold">Assigned driver</dt><dd className="mt-1 text-stone-600">{driver ? `${driver.name} · ${driver.driverId}` : 'Your Institute will assign a driver.'}</dd></div>{driver && <div><dt className="font-bold">Vehicle</dt><dd>{driver.vehicleNumber}</dd></div>}</dl>{driver && <div className="mt-5 flex flex-wrap gap-3"><a href={`tel:${driver.phone}`} className="inline-flex min-h-11 items-center rounded-xl bg-amber-400 px-4 font-bold">Call driver</a><button onClick={() => navigate('tracking')} className="min-h-11 rounded-xl border px-4 font-bold">View live ride</button></div>}</article>; })}
+  </div></main>;
+}

@@ -1,3 +1,4 @@
+import InstituteTransport from '../../components/InstituteTransport';
 import { useLocation } from "react-router-dom";
 import {
   useCallback,
@@ -845,9 +846,11 @@ function MainScreen() {
      SCREENS
   ======================================================= */
 
+  let instituteManaged = false;
+  try { instituteManaged = JSON.parse(localStorage.getItem('parent') || '{}').accountSource === 'institute'; } catch {}
   const screens = {
     home: (
-      <Home
+      instituteManaged ? <InstituteTransport setTab={changeTab} /> : <Home
         setTab={
           changeTab
         }
@@ -880,7 +883,7 @@ function MainScreen() {
     ),
 
     children: (
-      <Children
+      instituteManaged ? <InstituteTransport setTab={changeTab} /> : <Children
         setTab={
           changeTab
         }
@@ -891,7 +894,7 @@ function MainScreen() {
     ),
 
     billing: (
-      <Billing
+      instituteManaged ? <InstituteTransport setTab={changeTab} /> : <Billing
         setTab={
           changeTab
         }

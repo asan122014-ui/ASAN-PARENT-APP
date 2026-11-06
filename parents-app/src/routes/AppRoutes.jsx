@@ -1,3 +1,4 @@
+import InstituteTransport from '../components/InstituteTransport';
 import {
   Routes,
   Route,
@@ -19,6 +20,8 @@ import ProtectedParentRoute from "./ProtectedParentRoute";
 ========================================================= */
 
 function AppRoutes() {
+  let instituteManaged = false;
+  try { instituteManaged = JSON.parse(localStorage.getItem('parent') || '{}').accountSource === 'institute'; } catch {}
   return (
     <Routes>
       <Route path="/booking-payment/:id" element={<ProtectedParentRoute><BookingPayment /></ProtectedParentRoute>} />
@@ -51,7 +54,7 @@ function AppRoutes() {
         path="/book-ride"
         element={
           <ProtectedParentRoute>
-            <BookRide />
+            {instituteManaged ? <InstituteTransport /> : <BookRide />}
           </ProtectedParentRoute>
         }
       />
