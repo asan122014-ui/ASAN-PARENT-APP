@@ -45,7 +45,7 @@ const SummaryCard = ({
         ["Pending", "Overdue"].includes(invoice.status)
     );
 
-  const bookingPaidAmount = paidBookings.reduce((sum, booking) => sum + Number(booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0), 0);
+  const bookingPaidAmount = paidBookings.reduce((sum, booking) => sum + Number(booking.couponAppliedAt ? 0 : booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0), 0);
   const locationChangePaidAmount = paidLocationChanges.reduce((sum, change) => sum + Number(change.amountDue || 0), 0);
   const bookingPendingAmount = pendingBookings.reduce((sum, booking) => sum + Number(booking.quote?.totalMonthly ?? 0), 0);
 

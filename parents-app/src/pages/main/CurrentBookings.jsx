@@ -1,4 +1,5 @@
 import { bookingStatus as getStatus } from "../../utils/bookingStatus";
+import ServiceRenewalPanel from '../../components/ServiceRenewalPanel';
 import { Link } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import { API } from "../../api/api";
@@ -20,9 +21,9 @@ function CurrentBookings({ onBookingsChange } = {}) {
     if (quiet) setRefreshing(true);
     try {
       const response = await API.get("/bookings/mine");
-      const current = (response.data?.data || []).filter((booking) => openBookingStatuses.has(booking.status));
-      setBookings(current);
-      onBookingsChange?.(current);
+      const all = response.data?.data || [];
+      setBookings(all.filter(booking => openBookingStatuses.has(booking.status) || booking.status === 'expired' || booking.paidAt || booking.couponAppliedAt));
+      onBookingsChange?.(all.filter(booking => openBookingStatuses.has(booking.status)));
       setError("");
     } catch (requestError) {
       setError(requestError?.response?.data?.message || "Unable to load your booking status.");
@@ -59,7 +60,7 @@ function CurrentBookings({ onBookingsChange } = {}) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[9px] font-extrabold uppercase tracking-[1.6px] text-[#B77D00]">Booking tracker</p>
-          <h2 className="mt-1 text-[19px] font-extrabold text-black">Your current bookings</h2>
+          <h2 className="mt-1 text-[19px] font-extrabold text-black">Your bookings and past services</h2>
         </div>
         <button type="button" onClick={() => loadBookings(true)} disabled={refreshing} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#EFE4D0] bg-[#FFF9EE] text-[#8C6A18] disabled:opacity-50" aria-label="Refresh booking status">
           <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
@@ -83,7 +84,7 @@ function CurrentBookings({ onBookingsChange } = {}) {
         <div className="mt-4 space-y-3">
           {bookings.map((booking) => {
             const status = getStatus(booking);
-            const child = booking.childId || booking.child || {};
+            const child = booking.child || booking.childId || {};
             const childNames = (booking.children?.length ? booking.children : [child]).map((item) => item?.name).filter(Boolean).join(", ");
             const cancellable = canCancelStatuses.has(booking.status) && booking.driverRequestId?.status !== "Cancelled";
             return (
@@ -108,7 +109,8 @@ function CurrentBookings({ onBookingsChange } = {}) {
                       <b className="shrink-0 text-[11px] text-[#8A6100]">₹{Number(booking.quote?.totalMonthly || 0).toLocaleString("en-IN")} / month</b>
                     </div>
                   </div>
-                  {["awaiting_payment", "active"].includes(booking.status) && <Link to={`/booking-payment/${booking._id}`} className="mt-3 flex h-11 items-center justify-center rounded-[13px] bg-[#FFB400] text-xs font-extrabold text-black">{booking.status === "active" ? "View payment and service dates" : "Pay monthly price"}</Link>}
+                  {(["awaiting_payment", "active", "expired"].includes(booking.status) || booking.paidAt || booking.couponAppliedAt) && <Link to={`/booking-payment/${booking._id}`} className="mt-3 flex h-11 items-center justify-center rounded-[13px] bg-[#FFB400] text-xs font-extrabold text-black">{booking.status === "awaiting_payment" ? "Pay monthly price" : "View payment and service dates"}</Link>}
+                  <ServiceRenewalPanel booking={booking} onChange={() => loadBookings(true)} />
                   {cancellable && (cancelId === booking._id ? (
                     <div className="mt-3 rounded-[13px] border border-[#F0D9D5] bg-[#FFF7F5] p-3">
                       <p className="text-[10px] font-bold text-[#7C342D]">Cancel this ride request?</p>

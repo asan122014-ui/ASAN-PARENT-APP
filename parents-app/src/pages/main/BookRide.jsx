@@ -1,7 +1,7 @@
 import { previousBookingDetails } from "../../utils/previousBooking";
 import { createElement, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, MapPin, Clock3, Route as RouteIcon, UserRound, Search, LoaderCircle, Plus, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { API } from "../../api/api";
 import MapPicker from "../../components/MapPicker";
 import { createEmptyChild } from "../auth/onboarding/ChildDetailsStep";
@@ -18,6 +18,8 @@ const getSavedDriverIds = () => {
 };
 function BookRide() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const previousBookingId = searchParams.get('from');
   const [step, setStep] = useState(1);
   const [children, setChildren] = useState([emptyChild]);
   const [school, setSchool] = useState("");
@@ -42,8 +44,11 @@ function BookRide() {
     let active = true;
     API.get("/bookings/mine").then((response) => {
       if (!active) return;
-      const saved = previousBookingDetails(response.data?.data);
+      const rows = response.data?.data || [];
+      const saved = previousBookingDetails(previousBookingId ? rows.filter(item => String(item._id) === previousBookingId) : rows);
+      if (previousBookingId && !saved) { setPreviousDetailsMessage('That previous booking could not be loaded. Please enter your ride details below.'); return; }
       if (!saved) return;
+      if (previousBookingId && saved.driverId) saved.driverChoice = 'existing';
       setChildren(saved.children.map((child) => ({ ...emptyChild, ...child })));
       setSchool(saved.school);
       setRoute(saved.route);
@@ -55,7 +60,7 @@ function BookRide() {
       if (active) setPreviousDetailsMessage("We couldn’t load your previous booking details. You can still enter them below.");
     }).finally(() => { if (active) setPreviousDetailsLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [previousBookingId]);
 
   useEffect(() => {
     const pickupCoordinates = route.pickupCoordinates;

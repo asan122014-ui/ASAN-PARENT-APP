@@ -1,3 +1,4 @@
+import ServiceRenewalPanel from '../../components/ServiceRenewalPanel';
 import { paymentPresentation } from "../../utils/paymentPresentation";
 import ParentPaymentCoupon from "../../components/ParentPaymentCoupon";
 import { useCallback, useEffect, useState } from "react";
@@ -168,6 +169,7 @@ export default function BookingPayment() {
         {canCancel && (confirmCancel ? <div className="mt-4 rounded-[15px] border border-[#F0D9D5] bg-[#FFF7F5] p-4"><p className="text-xs font-extrabold text-[#7C342D]">Cancel this booking?</p><p className="mt-1 text-[11px] leading-5 text-[#8C625B]">This cancels the booking and payment access. If a payment completes at the same time, it will be refunded.</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling} className="h-10 flex-1 rounded-xl border border-[#E7D9D6] bg-white text-xs font-bold">Keep booking</button><button type="button" onClick={cancelBooking} disabled={cancelling} className="h-10 flex-1 rounded-xl bg-[#B83E32] text-xs font-extrabold text-white disabled:opacity-50">{cancelling ? "Cancelling…" : "Confirm cancel"}</button></div></div> : <button type="button" onClick={() => setConfirmCancel(true)} className="mt-4 h-10 w-full rounded-[13px] border border-[#E7D9D6] bg-white text-xs font-bold text-[#8D4B43]">Cancel booking</button>)}
       </>}
       <p className="mt-4 flex items-center gap-2 text-[10px] text-zinc-500"><ShieldCheck size={14}/> Payments processed securely by Razorpay</p>
+      <ServiceRenewalPanel booking={booking} onChange={refresh} />
     </section>}
   </div></main>;
 }
