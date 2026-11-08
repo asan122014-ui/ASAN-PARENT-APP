@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import useInvoicePayment from '../../hooks/useInvoicePayment';
+import { downloadMonthlyInvoice } from '../../utils/monthlyInvoice';
+import { createElement, useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,6 +17,24 @@ import { getInvoiceById } from "../../api/invoiceApi";
 import StatusBadge from "../../components/billing/StatusBadge";
 import ParentPaymentCoupon from "../../components/ParentPaymentCoupon";
 
+const Item = ({ icon, title, value }) => (
+    <div className="flex items-center justify-between py-4 border-b border-gray-100">
+      <div className="flex items-center gap-3">
+        <div className="bg-yellow-100 p-2 rounded-xl">
+          {createElement(icon, {size: 18, className: "text-yellow-600"})}
+        </div>
+
+        <span className="text-gray-600">
+          {title}
+        </span>
+      </div>
+
+      <span className="font-semibold text-gray-800 text-right">
+        {value}
+      </span>
+    </div>
+  );
+
 const InvoiceDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -22,11 +42,7 @@ const InvoiceDetails = () => {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInvoice();
-  }, [id]);
-
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
     try {
       const res = await getInvoiceById(id);
       setInvoice(res.data);
@@ -35,7 +51,9 @@ const InvoiceDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+  const { paying, paymentError, payInvoice } = useInvoicePayment(invoice, fetchInvoice);
+  useEffect(() => { const timer = window.setTimeout(fetchInvoice, 0); return () => window.clearTimeout(timer); }, [fetchInvoice]);
 
   const formatMonth = (month) => {
     if (!month) return "--";
@@ -58,26 +76,7 @@ const InvoiceDetails = () => {
     });
   };
 
-  const Item = ({ icon: Icon, title, value }) => (
-    <div className="flex items-center justify-between py-4 border-b border-gray-100">
-      <div className="flex items-center gap-3">
-        <div className="bg-yellow-100 p-2 rounded-xl">
-          <Icon
-            size={18}
-            className="text-yellow-600"
-          />
-        </div>
 
-        <span className="text-gray-600">
-          {title}
-        </span>
-      </div>
-
-      <span className="font-semibold text-gray-800 text-right">
-        {value}
-      </span>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -288,6 +287,7 @@ const InvoiceDetails = () => {
 
       </div>
 
+      {paymentError && <p role="alert" className="mx-5 mb-5 rounded-xl bg-red-50 p-4 text-red-700">{paymentError}</p>}
       {/* ================= BOTTOM ACTIONS ================= */}
 
       <div className="fixed bottom-5 left-0 right-0 px-5 app-screen-width max-w-[475px] mx-auto">
@@ -295,9 +295,7 @@ const InvoiceDetails = () => {
         {invoice.couponAppliedAt && <p className="mb-3 text-sm font-bold text-green-700">Coupon applied. No payment collected.</p>}
 
         <button
-          onClick={() => {
-            alert("PDF download will be added in the next phase.");
-          }}
+          onClick={() => downloadMonthlyInvoice(invoice)}
           className="w-full mb-3 border-2 border-yellow-400 text-yellow-600 py-4 rounded-2xl font-semibold flex justify-center items-center gap-2 hover:bg-yellow-50 transition"
         >
           <Download size={20} />
@@ -305,7 +303,8 @@ const InvoiceDetails = () => {
         </button>
 
         <button
-          disabled={invoice.status === "Paid"}
+          onClick={payInvoice}
+          disabled={paying || !["Pending", "Overdue"].includes(invoice.status)}
           className={`w-full py-4 rounded-2xl text-white font-bold shadow-lg transition ${
             invoice.status === "Paid"
               ? "bg-green-500 cursor-not-allowed"
@@ -314,7 +313,7 @@ const InvoiceDetails = () => {
         >
           {invoice.status === "Paid"
             ? "Invoice Paid"
-            : "Pay Now"}
+            : invoice.status === "Cancelled" ? "Invoice cancelled" : paying ? "Opening payment…" : "Pay Now"}
         </button>
 
       </div>
