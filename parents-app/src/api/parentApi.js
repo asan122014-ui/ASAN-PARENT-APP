@@ -1,3 +1,4 @@
+import { session } from '../session/session';
 import {
   API,
 } from "./api.js";
@@ -87,13 +88,8 @@ export const logoutParent =
   async (
     fcmToken
   ) => {
-    const response =
-      await API.put(
-        "/parent/logout",
-        {
-          fcmToken,
-        }
-      );
-
-    return response.data;
+    try {
+      const response = await API.put('/parent/logout', {fcmToken});
+      return response.data;
+    } finally { await session.logout(); }
   };

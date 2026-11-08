@@ -1,3 +1,4 @@
+import { bindSessionSocket } from '../../session/session';
 import { bookingStatus as getBookingStatus } from "../../utils/bookingStatus";
 import {
 
@@ -610,6 +611,7 @@ function Home({
         }
 
       );
+    const unbindSessionSocket = bindSessionSocket(socket);
 
 
 
@@ -1079,6 +1081,7 @@ function Home({
 
     return () => {
 
+      unbindSessionSocket();
       socket.disconnect();
 
     };

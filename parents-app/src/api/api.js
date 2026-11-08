@@ -1,3 +1,4 @@
+import { attachSession, session } from '../session/session';
 import axios from "axios";
 
 /* =========================================================
@@ -114,6 +115,8 @@ API.interceptors.request.use(
    RESPONSE INTERCEPTOR
 ========================================================= */
 
+attachSession(API);
+
 API.interceptors.response.use(
   (response) =>
     response,
@@ -126,27 +129,6 @@ API.interceptors.response.use(
     /* =====================================================
        UNAUTHENTICATED
     ===================================================== */
-
-    if (
-      status ===
-      401
-    ) {
-      window.dispatchEvent(
-        new CustomEvent(
-          "asan:unauthorized",
-          {
-            detail: {
-              message:
-                error
-                  .response
-                  ?.data
-                  ?.message ||
-                "Authentication failed",
-            },
-          }
-        )
-      );
-    }
 
     /* =====================================================
        FORBIDDEN
@@ -236,6 +218,7 @@ const getAccessToken =
 
 const clearAccessToken =
   () => {
+    void session.clear();
     localStorage.removeItem(
       "accessToken"
     );

@@ -15,6 +15,21 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        java.io.File installMarker = new java.io.File(getNoBackupFilesDir(), "asan-install-v1");
+        if (!installMarker.exists()) {
+            boolean existingInstall = false;
+            try {
+                android.content.pm.PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+                existingInstall = info.firstInstallTime < info.lastUpdateTime;
+            } catch (android.content.pm.PackageManager.NameNotFoundException ignored) { }
+            if (!existingInstall) {
+                android.webkit.CookieManager.getInstance().removeAllCookies(null);
+                android.webkit.WebStorage.getInstance().deleteAllData();
+                getSharedPreferences("asan_session_vault", 0).edit().clear().commit();
+            }
+            try { installMarker.createNewFile(); } catch (java.io.IOException ignored) { }
+        }
+        registerPlugin(SessionVaultPlugin.class);
         super.onCreate(savedInstanceState);
         checkAndRequestPermissions();
     }

@@ -1,3 +1,4 @@
+import { bindSessionSocket } from '../../session/session';
 import {
   useEffect,
   useMemo,
@@ -393,6 +394,7 @@ function Notifications({
             true,
         }
       );
+    const unbindSessionSocket = bindSessionSocket(socket);
 
     socketRef.current =
       socket;
@@ -511,6 +513,7 @@ function Notifications({
         handleNotification
       );
 
+      unbindSessionSocket();
       socket.disconnect();
 
       socketRef.current =

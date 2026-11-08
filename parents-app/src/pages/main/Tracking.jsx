@@ -1,3 +1,4 @@
+import { bindSessionSocket } from '../../session/session';
 import {
   Fragment,
   useCallback,
@@ -877,6 +878,7 @@ function Tracking({ setTab }) {
           },
         }
       );
+    const unbindSessionSocket = bindSessionSocket(socket);
 
     socketRef.current =
       socket;
@@ -1047,6 +1049,7 @@ function Tracking({ setTab }) {
         }
       );
 
+      unbindSessionSocket();
       socket.disconnect();
     };
   }, [
