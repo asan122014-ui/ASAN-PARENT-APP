@@ -9,3 +9,5 @@
 -keep @interface com.getcapacitor.annotation.** { *; }
 -keep @interface com.getcapacitor.PluginMethod { *; }
 -keep @interface com.getcapacitor.NativePlugin { *; }
+# Session methods are invoked by name through the Capacitor bridge.
+-keep class com.parents.app.SessionVaultPlugin { *; }
