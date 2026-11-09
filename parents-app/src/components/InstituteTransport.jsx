@@ -2,6 +2,9 @@ import { createElement, useState } from 'react';
 import { ArrowRight, Bell, Building2, BusFront, ChevronRight, Clock3, GraduationCap, MapPin, Phone, ReceiptText, RefreshCw, Route, UsersRound } from 'lucide-react';
 import useInstituteTransport from '../hooks/useInstituteTransport';
 import { API } from '../api/api';
+import { useNavigate } from 'react-router-dom';
+import { getParentInvoices } from '../api/invoiceApi';
+import { findStudentInvoice } from '../utils/instituteInvoice';
 import './InstituteTransport.css';
 
 const money = value => value == null ? 'To be confirmed' : `₹${Number(value).toLocaleString('en-IN')}`;
@@ -12,9 +15,24 @@ function transportTime(value) {
   const hour = Number(match[1]);
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
-function StudentCard({ child, driver, detailed, navigate }) {
+function StudentCard({ child, driver, detailed, navigate, openInvoice }) {
   const [checking, setChecking] = useState(false);
   const [trackingMessage, setTrackingMessage] = useState('');
+  const [openingInvoice, setOpeningInvoice] = useState(false);
+  const payPayment = async () => {
+    if (openingInvoice) return;
+    setOpeningInvoice(true); setTrackingMessage('');
+    try {
+      const parentId = child.parentId?._id || child.parentId;
+      if (!parentId) throw new Error('Parent details are unavailable. Please refresh and try again.');
+      const result = await getParentInvoices(parentId);
+      const invoices = Array.isArray(result?.data) ? result.data : Array.isArray(result?.data?.data) ? result.data.data : [];
+      const invoice = findStudentInvoice(invoices,child._id);
+      if (!invoice?._id) throw new Error('Your institute has not issued this month’s invoice yet. Please contact your transport coordinator.');
+      openInvoice(invoice._id);
+    } catch (error) { setTrackingMessage(error.response?.data?.message || error.message || 'Unable to open the invoice. Please try again.'); }
+    finally { setOpeningInvoice(false); }
+  };
   const access = child.trackingAccess;
   const liveRide = async () => {
     if (checking || !access?.canTrack) return;
@@ -34,13 +52,13 @@ function StudentCard({ child, driver, detailed, navigate }) {
     <div className={`ip-route ${child.assignedRouteName ? 'ip-route-assigned' : ''}`}><Route size={17} /><span>{child.assignedRouteName || 'Route assignment pending'}</span><span className="ip-status-dot" /></div>
     <div className="ip-times"><div><span><Clock3 size={15} /> Pickup</span><strong>{transportTime(child.pickupTime)}</strong></div><div><span><Clock3 size={15} /> School return</span><strong>{transportTime(child.eveningPickup)}</strong></div></div>
     <div className="ip-location"><MapPin size={18} /><div><span>{child.pickupMode === 'route_stops' ? 'Assigned pickup point' : 'Home pickup'}</span><p>{child.pickupStopName || child.pickupLocation || 'Your institute will confirm the pickup location.'}</p></div></div>
-    {detailed && <div className="ip-fee"><div><span>Monthly transport fee</span><strong>{money(child.monthlyTransportFee)}</strong></div><p>{child.monthlyTransportFee == null ? 'Your institute will confirm the fee with the route.' : 'View invoices and payment status in Billing.'}</p>{child.monthlyTransportFee != null && <button onClick={() => navigate('billing')}>View billing <ArrowRight size={16} /></button>}</div>}
+    {detailed && <div className="ip-fee"><div><span>Monthly transport fee</span><strong>{money(child.monthlyTransportFee)}</strong></div><p>{child.monthlyTransportFee == null ? 'Your institute will confirm the fee with the route.' : 'Open your invoice to review the amount and payment status.'}</p>{child.monthlyTransportFee != null && <button disabled={openingInvoice} onClick={payPayment}>{openingInvoice ? 'Opening invoice…' : 'View invoice'} <ArrowRight size={16} /></button>}</div>}
     <div className="ip-driver"><span className="ip-driver-icon"><BusFront size={20} /></span><div><strong>{driver?.name || 'Driver not assigned yet'}</strong><p>{driver ? [driver.driverId, driver.vehicleNumber].filter(Boolean).join(' · ') : 'Your institute will update your assignment here.'}</p></div>{driver?.phone && <a href={`tel:${driver.phone}`} aria-label={`Call ${driver.name}`} className="ip-call"><Phone size={18} /></a>}</div>
-    {driver && (access?.canTrack ? <button className="ip-track" disabled={checking} onClick={liveRide}>{checking ? 'Checking live trip…' : 'View live ride'} <ArrowRight size={18} /></button> : <div className="ip-tracking-wait"><Clock3 size={17}/><p>{access?.reason === 'payment_required' ? 'Complete this month’s payment to enable live tracking when the trip starts.' : 'Live tracking will appear when your child’s paid trip starts.'}</p>{access?.reason === 'payment_required' && <button onClick={()=>navigate('billing')}>View payment <ArrowRight size={15}/></button>}</div>)}
+    {driver && (access?.canTrack ? <button className="ip-track" disabled={checking} onClick={liveRide}>{checking ? 'Checking live trip…' : 'View live ride'} <ArrowRight size={18} /></button> : <div className="ip-tracking-wait"><Clock3 size={17}/><p>{access?.reason === 'payment_required' ? 'Complete this month’s payment to enable live tracking when the trip starts.' : 'Live tracking will appear when your child’s paid trip starts.'}</p>{access?.reason === 'payment_required' && <button disabled={openingInvoice} onClick={payPayment}>{openingInvoice ? 'Opening invoice…' : 'Pay the payment'} <ArrowRight size={15}/></button>}</div>)}
     {trackingMessage && <p className="ip-error" role="status">{trackingMessage}</p>}
   </article>;
 }
-export function InstituteTransportView({ data, error, loading, updatedAt, refresh, setTab, view = 'home' }) {
+export function InstituteTransportView({ data, error, loading, updatedAt, refresh, setTab, view = 'home', openInvoice = id => window.location.assign(`/invoice/${encodeURIComponent(id)}`) }) {
   const childrenView = view === 'children';
   const children = data?.children || [];
   const assigned = new Set(children.map(child => child.assignedRouteName).filter(Boolean)).size;
@@ -52,7 +70,7 @@ export function InstituteTransportView({ data, error, loading, updatedAt, refres
     {error && <div role="alert" className="ip-error"><p>{error}</p><button disabled={loading} onClick={refresh}>Try again</button></div>}
     {!data && !error && <div role="status" className="ip-loading">Loading your family’s transport details…</div>}
     {data && <section className="ip-children" aria-label={childrenView ? 'Enrolled children' : 'Family transport'}><div className="ip-section-title"><div><p>{childrenView ? 'STUDENT DETAILS' : 'FAMILY TRANSPORT'}</p><h2>{childrenView ? 'Made for their school day' : 'Ready for the school day'}</h2></div><span>{children.length.toString().padStart(2,'0')}</span></div>
-      {children.length ? children.map(child => <StudentCard key={child._id} child={child} driver={(data.drivers || []).find(driver => driver.driverId === child.driverId)} detailed={childrenView} navigate={navigate} />) : <div className="ip-empty"><span><GraduationCap size={32} /></span><h3>A new journey starts here</h3><p>Your institute will add your children and their transport details. They’ll appear here as soon as enrollment is complete.</p></div>}
+      {children.length ? children.map(child => <StudentCard key={child._id} child={child} driver={(data.drivers || []).find(driver => driver.driverId === child.driverId)} detailed={childrenView} navigate={navigate} openInvoice={openInvoice} />) : <div className="ip-empty"><span><GraduationCap size={32} /></span><h3>A new journey starts here</h3><p>Your institute will add your children and their transport details. They’ll appear here as soon as enrollment is complete.</p></div>}
     </section>}
     <aside className="ip-managed-note"><Building2 size={20} /><div><strong>Managed by your institute</strong><p>Need to change a pickup, route or student detail? Contact your transport coordinator.</p></div></aside>
     {updatedAt && <p className="ip-updated" role="status">Last updated {updatedAt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>}
@@ -60,5 +78,6 @@ export function InstituteTransportView({ data, error, loading, updatedAt, refres
 }
 export default function InstituteTransport({ setTab, view = 'home' }) {
   const transport = useInstituteTransport(API, '/institute-app/parent');
-  return <InstituteTransportView {...transport} setTab={setTab} view={view} />;
+  const navigate = useNavigate();
+  return <InstituteTransportView {...transport} setTab={setTab} view={view} openInvoice={id => navigate(`/invoice/${encodeURIComponent(id)}`)} />;
 }
