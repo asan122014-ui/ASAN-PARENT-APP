@@ -883,7 +883,7 @@ function MainScreen() {
     ),
 
     children: (
-      instituteManaged ? <InstituteTransport setTab={changeTab} /> : <Children
+      instituteManaged ? <InstituteTransport setTab={changeTab} view="children" /> : <Children
         setTab={
           changeTab
         }

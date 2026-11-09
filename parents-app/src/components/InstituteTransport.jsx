@@ -1,15 +1,48 @@
+import { createElement } from 'react';
+import { ArrowRight, Bell, Building2, BusFront, ChevronRight, Clock3, GraduationCap, MapPin, Phone, ReceiptText, RefreshCw, Route, UsersRound } from 'lucide-react';
 import useInstituteTransport from '../hooks/useInstituteTransport';
 import { API } from '../api/api';
-export default function InstituteTransport({ setTab }) {
-  const { data, error, loading, updatedAt, refresh: load } = useInstituteTransport(API, '/institute-app/parent');
+import './InstituteTransport.css';
+
+const money = value => value == null ? 'To be confirmed' : `₹${Number(value).toLocaleString('en-IN')}`;
+function transportTime(value) {
+  if (!value) return 'To be confirmed';
+  const match = String(value).match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? 'PM' : 'AM'}`;
+}
+function StudentCard({ child, driver, detailed, navigate }) {
+  const liveRide = () => { localStorage.setItem('selectedTrackingDriverId', driver.driverId); navigate('tracking'); };
+  return <article className="ip-student">
+    <div className="ip-student-heading"><span className="ip-avatar"><GraduationCap size={25} /></span><div className="ip-student-name"><h3>{child.name}</h3><p>{child.grade ? `Class ${child.grade}` : 'Institute student'}{child.school ? ` · ${child.school}` : ''}</p></div></div>
+    <div className={`ip-route ${child.assignedRouteName ? 'ip-route-assigned' : ''}`}><Route size={17} /><span>{child.assignedRouteName || 'Route assignment pending'}</span><span className="ip-status-dot" /></div>
+    <div className="ip-times"><div><span><Clock3 size={15} /> Pickup</span><strong>{transportTime(child.pickupTime)}</strong></div><div><span><Clock3 size={15} /> School return</span><strong>{transportTime(child.eveningPickup)}</strong></div></div>
+    <div className="ip-location"><MapPin size={18} /><div><span>{child.pickupMode === 'route_stops' ? 'Assigned pickup point' : 'Home pickup'}</span><p>{child.pickupStopName || child.pickupLocation || 'Your institute will confirm the pickup location.'}</p></div></div>
+    {detailed && <div className="ip-fee"><div><span>Monthly transport fee</span><strong>{money(child.monthlyTransportFee)}</strong></div><p>{child.monthlyTransportFee == null ? 'Your institute will confirm the fee with the route.' : 'View invoices and payment status in Billing.'}</p>{child.monthlyTransportFee != null && <button onClick={() => navigate('billing')}>View billing <ArrowRight size={16} /></button>}</div>}
+    <div className="ip-driver"><span className="ip-driver-icon"><BusFront size={20} /></span><div><strong>{driver?.name || 'Driver not assigned yet'}</strong><p>{driver ? [driver.driverId, driver.vehicleNumber].filter(Boolean).join(' · ') : 'Your institute will update your assignment here.'}</p></div>{driver?.phone && <a href={`tel:${driver.phone}`} aria-label={`Call ${driver.name}`} className="ip-call"><Phone size={18} /></a>}</div>
+    {driver && <button className="ip-track" onClick={liveRide}>View live ride <ArrowRight size={18} /></button>}
+  </article>;
+}
+export function InstituteTransportView({ data, error, loading, updatedAt, refresh, setTab, view = 'home' }) {
+  const childrenView = view === 'children';
+  const children = data?.children || [];
+  const assigned = new Set(children.map(child => child.assignedRouteName).filter(Boolean)).size;
   const navigate = tab => setTab ? setTab(tab) : window.location.assign(`/app?tab=${tab}`);
-  return <main className="min-h-screen bg-[#FFF9ED] px-4 pb-28 pt-8 text-[#1C1917]"><div className="mx-auto max-w-2xl space-y-5">
-    <header className="rounded-3xl border border-amber-200 bg-gradient-to-br from-white to-amber-100 p-6"><p className="text-sm font-bold uppercase tracking-widest text-amber-800">Institute transport</p><h1 className="mt-3 text-2xl font-extrabold">{data?.instituteName || 'Your children’s transport'}</h1><p className="mt-3 text-sm leading-6 text-stone-600">Your Institute manages your children, driver assignments and routes. Contact your transport coordinator to request changes.</p></header>
-    <div className="flex flex-wrap items-center gap-3"><button className="min-h-11 rounded-xl border border-amber-200 bg-white px-4 font-bold" disabled={loading} onClick={load}>{loading ? 'Refreshing…' : 'Refresh transport'}</button>{updatedAt && <p className="text-sm text-stone-600" role="status">Updated {updatedAt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</p>}</div>
-    <nav className="flex flex-wrap gap-3" aria-label="Institute account"><button className="min-h-11 rounded-xl bg-amber-400 px-4 font-bold" onClick={() => navigate('billing')}>Payments</button><button className="min-h-11 rounded-xl border bg-white px-4 font-bold" onClick={() => navigate('notifications')}>Notifications</button><button className="min-h-11 rounded-xl border bg-white px-4 font-bold" onClick={() => navigate('trips')}>Ride history</button><button className="min-h-11 rounded-xl border bg-white px-4 font-bold" onClick={() => navigate('profile')}>My account</button></nav>
-    {error && <div role="alert" className="rounded-xl bg-red-50 p-4"><p>{error}</p><button onClick={load} className="mt-2 min-h-11 font-bold underline">Retry</button></div>}
-    {!data && !error && <p role="status">Loading your transport…</p>}
-    {data?.children?.length === 0 && <section className="rounded-3xl border bg-white p-6"><h2 className="text-xl font-bold">Your Institute is setting things up</h2><p className="mt-2 leading-6 text-stone-600">Your child and assigned driver will appear here when your transport coordinator adds them.</p></section>}
-    {data?.children?.map(child => { const driver = (data.drivers || []).find(item => item.driverId === child.driverId); return <article key={child._id} className="rounded-3xl border border-amber-200 bg-white p-6"><p className="text-sm text-stone-500">{child.instituteReference} · {child.grade}</p><h2 className="mt-1 text-2xl font-bold">{child.name}</h2><dl className="mt-4 space-y-3 text-sm"><div><dt className="font-bold">Route</dt><dd>{child.assignedRouteName || 'Your Institute will assign a route.'}</dd></div><div><dt className="font-bold">Monthly transport fee</dt><dd className="mt-1 text-stone-600">{child.monthlyTransportFee == null ? 'Your Institute will confirm the fee when assigning the route.' : `₹${Number(child.monthlyTransportFee).toLocaleString('en-IN')} per month`}</dd></div><div><dt className="font-bold">{child.pickupMode === 'route_stops' ? 'Assigned pickup stop' : 'Home pickup'}</dt><dd className="mt-1 leading-6 text-stone-600">{child.pickupLocation} · {child.pickupTime}</dd></div><div><dt className="font-bold">School return</dt><dd className="mt-1 text-stone-600">{child.eveningPickup || 'To be confirmed'}</dd></div><div><dt className="font-bold">Assigned driver</dt><dd className="mt-1 text-stone-600">{driver ? `${driver.name} · ${driver.driverId}` : 'Your Institute will assign a driver.'}</dd></div>{driver && <div><dt className="font-bold">Vehicle</dt><dd>{driver.vehicleNumber}</dd></div>}</dl>{driver && <div className="mt-5 flex flex-wrap gap-3"><a href={`tel:${driver.phone}`} className="inline-flex min-h-11 items-center rounded-xl bg-amber-400 px-4 font-bold">Call driver</a><button onClick={() => { localStorage.setItem('selectedTrackingDriverId', driver.driverId); navigate('tracking'); }} className="min-h-11 rounded-xl border px-4 font-bold">View live ride</button></div>}</article>; })}
+  return <main className="institute-parent"><div className="ip-screen">
+    <header className="ip-header"><div className="ip-brand"><Building2 size={22} /><div><span>ASAN RIDES</span><p>Institute transport</p></div></div><div className="ip-header-actions"><button aria-label="Refresh transport" disabled={loading} onClick={refresh}><RefreshCw size={19} className={loading ? 'ip-spinning' : ''} /></button><button aria-label="Notifications" onClick={() => navigate('notifications')}><Bell size={21} /></button></div></header>
+    <section className="ip-hero"><div className="ip-eyebrow">{childrenView ? 'YOUR FAMILY' : 'SCHOOL DAYS, SIMPLIFIED'}</div><h1>{childrenView ? 'Your children.' : <>Their journey.<br />Your peace of mind.</>}</h1><p className="ip-hero-copy">{childrenView ? 'Pickup plans and transport details, all in one place.' : 'Stay connected to your child’s everyday school journey.'}</p><div className="ip-institute"><Building2 size={17} /><span>{data?.instituteName || 'Your institute'}</span></div><div className="ip-hero-bottom"><span><UsersRound size={17} />{data ? `${children.length} ${children.length === 1 ? 'child' : 'children'} enrolled` : 'Loading family details'}</span>{data && <span><span className={`ip-dot ${assigned ? 'ip-dot-green' : ''}`} />{assigned ? `${assigned} ${assigned === 1 ? 'route assigned' : 'routes assigned'}` : 'Setup in progress'}</span>}</div></section>
+    {!childrenView && <nav className="ip-shortcuts" aria-label="Transport shortcuts">{[{label:'Children',tab:'children',Icon:UsersRound},{label:'Billing',tab:'billing',Icon:ReceiptText},{label:'Ride history',tab:'trips',Icon:Clock3}].map(({label,tab,Icon}) => <button key={tab} onClick={() => navigate(tab)}><span>{createElement(Icon,{size:22})}</span>{label}<ChevronRight size={15} /></button>)}</nav>}
+    {error && <div role="alert" className="ip-error"><p>{error}</p><button disabled={loading} onClick={refresh}>Try again</button></div>}
+    {!data && !error && <div role="status" className="ip-loading">Loading your family’s transport details…</div>}
+    {data && <section className="ip-children" aria-label={childrenView ? 'Enrolled children' : 'Family transport'}><div className="ip-section-title"><div><p>{childrenView ? 'STUDENT DETAILS' : 'FAMILY TRANSPORT'}</p><h2>{childrenView ? 'Made for their school day' : 'Ready for the school day'}</h2></div><span>{children.length.toString().padStart(2,'0')}</span></div>
+      {children.length ? children.map(child => <StudentCard key={child._id} child={child} driver={(data.drivers || []).find(driver => driver.driverId === child.driverId)} detailed={childrenView} navigate={navigate} />) : <div className="ip-empty"><span><GraduationCap size={32} /></span><h3>A new journey starts here</h3><p>Your institute will add your children and their transport details. They’ll appear here as soon as enrollment is complete.</p></div>}
+    </section>}
+    <aside className="ip-managed-note"><Building2 size={20} /><div><strong>Managed by your institute</strong><p>Need to change a pickup, route or student detail? Contact your transport coordinator.</p></div></aside>
+    {updatedAt && <p className="ip-updated" role="status">Last updated {updatedAt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>}
   </div></main>;
+}
+export default function InstituteTransport({ setTab, view = 'home' }) {
+  const transport = useInstituteTransport(API, '/institute-app/parent');
+  return <InstituteTransportView {...transport} setTab={setTab} view={view} />;
 }
