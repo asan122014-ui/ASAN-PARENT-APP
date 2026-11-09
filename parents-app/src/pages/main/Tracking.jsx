@@ -621,7 +621,7 @@ function Tracking({ setTab }) {
               API.get(
                 `/driver/tracking?driverId=${encodeURIComponent(
                   driverId
-                )}`
+                )}${localStorage.getItem('selectedTrackingChildId') ? `&childId=${encodeURIComponent(localStorage.getItem('selectedTrackingChildId'))}` : ''}`
               ),
 
               API.get(

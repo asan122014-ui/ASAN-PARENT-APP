@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { createElement, useState } from 'react';
 import { ArrowRight, Bell, Building2, BusFront, ChevronRight, Clock3, GraduationCap, MapPin, Phone, ReceiptText, RefreshCw, Route, UsersRound } from 'lucide-react';
 import useInstituteTransport from '../hooks/useInstituteTransport';
 import { API } from '../api/api';
@@ -13,7 +13,22 @@ function transportTime(value) {
   return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? 'PM' : 'AM'}`;
 }
 function StudentCard({ child, driver, detailed, navigate }) {
-  const liveRide = () => { localStorage.setItem('selectedTrackingDriverId', driver.driverId); navigate('tracking'); };
+  const [checking, setChecking] = useState(false);
+  const [trackingMessage, setTrackingMessage] = useState('');
+  const access = child.trackingAccess;
+  const liveRide = async () => {
+    if (checking || !access?.canTrack) return;
+    setChecking(true); setTrackingMessage('');
+    try {
+      const response = await API.get('/institute-app/parent');
+      const latest = response.data?.children?.find(item => item._id === child._id);
+      if (!latest?.trackingAccess?.canTrack || latest.driverId !== driver.driverId) { setTrackingMessage('Live tracking opens after payment is confirmed and your child’s trip starts. Refresh to see the latest details.'); return; }
+      localStorage.setItem('selectedTrackingDriverId', driver.driverId);
+      localStorage.setItem('selectedTrackingChildId', child._id);
+      navigate('tracking');
+    } catch { setTrackingMessage('Unable to confirm the live trip. Please refresh and try again.'); }
+    finally { setChecking(false); }
+  };
   return <article className="ip-student">
     <div className="ip-student-heading"><span className="ip-avatar"><GraduationCap size={25} /></span><div className="ip-student-name"><h3>{child.name}</h3><p>{child.grade ? `Class ${child.grade}` : 'Institute student'}{child.school ? ` · ${child.school}` : ''}</p></div></div>
     <div className={`ip-route ${child.assignedRouteName ? 'ip-route-assigned' : ''}`}><Route size={17} /><span>{child.assignedRouteName || 'Route assignment pending'}</span><span className="ip-status-dot" /></div>
@@ -21,7 +36,8 @@ function StudentCard({ child, driver, detailed, navigate }) {
     <div className="ip-location"><MapPin size={18} /><div><span>{child.pickupMode === 'route_stops' ? 'Assigned pickup point' : 'Home pickup'}</span><p>{child.pickupStopName || child.pickupLocation || 'Your institute will confirm the pickup location.'}</p></div></div>
     {detailed && <div className="ip-fee"><div><span>Monthly transport fee</span><strong>{money(child.monthlyTransportFee)}</strong></div><p>{child.monthlyTransportFee == null ? 'Your institute will confirm the fee with the route.' : 'View invoices and payment status in Billing.'}</p>{child.monthlyTransportFee != null && <button onClick={() => navigate('billing')}>View billing <ArrowRight size={16} /></button>}</div>}
     <div className="ip-driver"><span className="ip-driver-icon"><BusFront size={20} /></span><div><strong>{driver?.name || 'Driver not assigned yet'}</strong><p>{driver ? [driver.driverId, driver.vehicleNumber].filter(Boolean).join(' · ') : 'Your institute will update your assignment here.'}</p></div>{driver?.phone && <a href={`tel:${driver.phone}`} aria-label={`Call ${driver.name}`} className="ip-call"><Phone size={18} /></a>}</div>
-    {driver && <button className="ip-track" onClick={liveRide}>View live ride <ArrowRight size={18} /></button>}
+    {driver && (access?.canTrack ? <button className="ip-track" disabled={checking} onClick={liveRide}>{checking ? 'Checking live trip…' : 'View live ride'} <ArrowRight size={18} /></button> : <div className="ip-tracking-wait"><Clock3 size={17}/><p>{access?.reason === 'payment_required' ? 'Complete this month’s payment to enable live tracking when the trip starts.' : 'Live tracking will appear when your child’s paid trip starts.'}</p>{access?.reason === 'payment_required' && <button onClick={()=>navigate('billing')}>View payment <ArrowRight size={15}/></button>}</div>)}
+    {trackingMessage && <p className="ip-error" role="status">{trackingMessage}</p>}
   </article>;
 }
 export function InstituteTransportView({ data, error, loading, updatedAt, refresh, setTab, view = 'home' }) {
