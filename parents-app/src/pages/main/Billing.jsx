@@ -28,7 +28,6 @@ import {
   getParentInvoices,
 } from "../../api/invoiceApi";
 import { API } from "../../api/api";
-import { Link } from "react-router-dom";
 import { downloadPaidRideInvoice } from "../../utils/paidRideInvoice";
 import { downloadLocationChangeInvoice } from "../../utils/paidLocationChangeInvoice";
 
@@ -1185,15 +1184,14 @@ const Billing = () => {
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-[14px] font-extrabold text-black">₹{Number(booking.couponAppliedAt ? 0 : booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <p className="mt-1 text-[8px] font-bold text-green-700">{booking.couponAppliedAt ? "WAIVED · ₹0 collected" : "PAID"}</p>
+                          <p className="mt-1 text-[8px] font-bold text-green-700">{booking.couponAppliedAt ? "COUPON APPLIED · ₹0 collected" : "PAID"}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-green-50 pt-2">
                         <p className="text-[9px] text-zinc-500">{booking.couponAppliedAt ? `Coupon: ${booking.couponCode}` : `Receipt ID: ${booking.paymentId?.paymentId || booking._id.slice(-8).toUpperCase()}`}</p>
-                        <Link to={`/booking-payment/${booking._id}`} className="text-xs font-bold text-[#8A6100] underline">View service details</Link>
-                        {!booking.couponAppliedAt && <DownloadInvoiceButton onDownload={() => { const parent = JSON.parse(localStorage.getItem("parent") || "{}"); return downloadPaidRideInvoice(booking, parent); }} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[#EBDCA9] bg-[#FFF9EE] px-3 text-[9px] font-extrabold text-[#8A6100] transition hover:bg-[#FFF0C2]">
+                        <DownloadInvoiceButton onDownload={() => { const parent = JSON.parse(localStorage.getItem("parent") || "{}"); return downloadPaidRideInvoice(booking, parent); }} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[#EBDCA9] bg-[#FFF9EE] px-3 text-[9px] font-extrabold text-[#8A6100] transition hover:bg-[#FFF0C2]">
                           <Download size={13}/> Download invoice
-                        </DownloadInvoiceButton>}
+                        </DownloadInvoiceButton>
                       </div>
                     </article>
                   );

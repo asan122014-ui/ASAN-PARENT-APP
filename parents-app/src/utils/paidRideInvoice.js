@@ -11,16 +11,17 @@ const escapePdf = (value) => clean(value).replace(/([\\()])/g, "\\$1");
 const money = (value) => `INR ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function createPaidRideInvoicePdf(booking, parent = {}) {
+  const couponApplied = Boolean(booking?.couponAppliedAt);
   const payment = booking?.paymentId || {};
   const child = booking?.children?.length ? booking.children.map((item) => item.name).filter(Boolean).join(", ") : booking?.child?.name || booking?.childId?.name || "School ride";
-  const date = payment.paidAt || booking?.paidAt;
+  const date = couponApplied ? booking.couponAppliedAt : payment.paidAt || booking?.paidAt;
   const paidDate = date ? new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }) : "--";
   const invoiceNumber = `ASAN-${String(payment.paymentId || booking?._id || "RIDE").replace(/[^a-zA-Z0-9]/g, "").slice(-14).toUpperCase()}`;
   const rows = [
     ["Invoice number", invoiceNumber],
-    ["Payment status", "PAID - VERIFIED BY RAZORPAY"],
-    ["Payment date", paidDate],
-    ["Payment reference", payment.paymentId || "Not provided"],
+    ["Payment status", couponApplied ? "COUPON APPLIED - NO PAYMENT COLLECTED" : "PAID - VERIFIED BY RAZORPAY"],
+    [couponApplied ? "Coupon applied on" : "Payment date", paidDate],
+    [couponApplied ? "Coupon code" : "Payment reference", couponApplied ? booking.couponCode : payment.paymentId || "Not provided"],
     ["Parent", parent.name || parent.fullName || "Parent account"],
     ["Parent email", parent.email || "Not provided"],
     ["Child", child],
@@ -65,8 +66,8 @@ export function createPaidRideInvoicePdf(booking, parent = {}) {
 
   commands.push("1 0.95 0.77 rg 46 105 503 62 re f");
   text("AMOUNT PAID", 62, 145, 9, true, "0.49 0.34 0.02");
-  text(money(payment.amount ?? booking?.quote?.totalMonthly), 62, 119, 21, true);
-  text("Payment verified with Razorpay. Keep this invoice for your records.", 46, 77, 9, false, "0.38 0.38 0.38");
+  text(money(couponApplied ? 0 : payment.amount ?? booking?.quote?.totalMonthly), 62, 119, 21, true);
+  text(couponApplied ? "Coupon applied. No payment was collected. Keep this invoice for your records." : "Payment verified with Razorpay. Keep this invoice for your records.", 46, 77, 9, false, "0.38 0.38 0.38");
   text("ASAN RIDES  |  Every ride, with care.", 46, 56, 8, true, "0.55 0.38 0.02");
 
   const content = commands.join("\n");
