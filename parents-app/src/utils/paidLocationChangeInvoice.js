@@ -1,3 +1,4 @@
+import { saveInvoiceFile } from './saveInvoiceFile.js';
 const clean = (value) => String(value ?? "--")
   .normalize("NFKD")
   .replace(/[\u0300-\u036f]/g, "")
@@ -92,12 +93,5 @@ export function createLocationChangeInvoicePdf(change, parent = {}) {
 
 export function downloadLocationChangeInvoice(change, parent) {
   const { blob, fileName } = createLocationChangeInvoicePdf(change, parent);
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return saveInvoiceFile({ blob, fileName });
 }

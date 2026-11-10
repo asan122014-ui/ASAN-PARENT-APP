@@ -33,6 +33,7 @@ public class MainActivity extends BridgeActivity {
         splash.setOnExitAnimationListener(provider -> provider.remove());
         // Register before BridgeActivity creates the JavaScript/native bridge.
         registerPlugin(SessionVaultPlugin.class);
+        registerPlugin(InvoiceFilesPlugin.class);
         super.onCreate(savedInstanceState);
         WindowCompat.enableEdgeToEdge(getWindow());
         SafeWindowInsets.install((android.view.View) getBridge().getWebView().getParent());

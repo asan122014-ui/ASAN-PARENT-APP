@@ -1,3 +1,4 @@
+import DownloadInvoiceButton from '../../components/billing/DownloadInvoiceButton';
 import useInvoicePayment from '../../hooks/useInvoicePayment';
 import { downloadMonthlyInvoice } from '../../utils/monthlyInvoice';
 import { createElement, useCallback, useEffect, useState } from "react";
@@ -294,13 +295,13 @@ const InvoiceDetails = () => {
         {["Pending", "Overdue"].includes(invoice.status) && <ParentPaymentCoupon endpoint={`/invoices/${invoice._id}/payment/coupon`} onApplied={fetchInvoice} />}
         {invoice.couponAppliedAt && <p className="mb-3 text-sm font-bold text-green-700">Coupon applied. No payment collected.</p>}
 
-        <button
-          onClick={() => downloadMonthlyInvoice(invoice)}
+        <DownloadInvoiceButton
+          onDownload={() => downloadMonthlyInvoice(invoice)}
           className="w-full mb-3 border-2 border-yellow-400 text-yellow-600 py-4 rounded-2xl font-semibold flex justify-center items-center gap-2 hover:bg-yellow-50 transition"
         >
           <Download size={20} />
           Download Invoice
-        </button>
+        </DownloadInvoiceButton>
 
         <button
           onClick={payInvoice}

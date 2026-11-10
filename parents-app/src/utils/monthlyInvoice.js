@@ -1,3 +1,4 @@
+import { saveInvoiceFile } from './saveInvoiceFile.js';
 const escape = value => String(value ?? '--').replace(/[&<>"']/g, character => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[character]));
 
 export function monthlyInvoiceDocument(invoice) {
@@ -12,10 +13,5 @@ export function monthlyInvoiceDocument(invoice) {
 }
 
 export function downloadMonthlyInvoice(invoice) {
-  const url = URL.createObjectURL(new Blob([monthlyInvoiceDocument(invoice)], {type:'text/html;charset=utf-8'}));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `ASAN-${String(invoice.invoiceNumber || invoice._id).replace(/[^a-zA-Z0-9-]/g,'')}.html`;
-  document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return saveInvoiceFile({ blob: new Blob([monthlyInvoiceDocument(invoice)], { type: 'text/html;charset=utf-8' }), fileName: `ASAN-${String(invoice.invoiceNumber || invoice._id).replace(/[^a-zA-Z0-9-]/g,'')}.html` });
 }

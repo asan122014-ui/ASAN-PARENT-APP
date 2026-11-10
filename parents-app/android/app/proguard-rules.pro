@@ -11,3 +11,6 @@
 -keep @interface com.getcapacitor.NativePlugin { *; }
 # Session methods are invoked by name through the Capacitor bridge.
 -keep class com.parents.app.SessionVaultPlugin { *; }
+
+# Invoice saving is invoked through the Capacitor bridge and activity callback.
+-keep class com.asan.parent.InvoiceFilesPlugin { *; }
