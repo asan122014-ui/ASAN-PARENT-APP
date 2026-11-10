@@ -1184,7 +1184,7 @@ const Billing = () => {
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-[14px] font-extrabold text-black">₹{Number(booking.couponAppliedAt ? 0 : booking.paymentId?.amount ?? booking.quote?.totalMonthly ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <p className="mt-1 text-[8px] font-bold text-green-700">{booking.couponAppliedAt ? "COUPON APPLIED · ₹0 collected" : "PAID"}</p>
+                          <p className="mt-1 text-[8px] font-bold text-green-700">{booking.couponAppliedAt ? "₹0 collected" : "PAID"}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-green-50 pt-2">
