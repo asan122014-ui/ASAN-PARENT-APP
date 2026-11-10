@@ -1,3 +1,4 @@
+import { isCurrentBooking } from '../../utils/bookingVisibility';
 import { bookingStatus as getStatus } from "../../utils/bookingStatus";
 import ServiceRenewalPanel from '../../components/ServiceRenewalPanel';
 import { Link } from "react-router-dom";
@@ -5,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import { API } from "../../api/api";
 import { AlertCircle, CheckCircle2, Clock3, RefreshCw, Route, X } from "lucide-react";
 
-const openBookingStatuses = new Set(["quoted", "awaiting_driver", "driver_searching", "driver_accepted", "awaiting_payment", "active"]);
 const canCancelStatuses = new Set(["awaiting_driver", "driver_searching", "awaiting_payment"]);
 
 function CurrentBookings({ onBookingsChange } = {}) {
@@ -22,8 +22,9 @@ function CurrentBookings({ onBookingsChange } = {}) {
     try {
       const response = await API.get("/bookings/mine");
       const all = response.data?.data || [];
-      setBookings(all.filter(booking => openBookingStatuses.has(booking.status) || booking.status === 'expired' || booking.paidAt || booking.couponAppliedAt));
-      onBookingsChange?.(all.filter(booking => openBookingStatuses.has(booking.status)));
+      const current = all.filter(booking => isCurrentBooking(booking));
+      setBookings(current);
+      onBookingsChange?.(current);
       setError("");
     } catch (requestError) {
       setError(requestError?.response?.data?.message || "Unable to load your booking status.");
@@ -60,7 +61,7 @@ function CurrentBookings({ onBookingsChange } = {}) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[9px] font-extrabold uppercase tracking-[1.6px] text-[#B77D00]">Booking tracker</p>
-          <h2 className="mt-1 text-[19px] font-extrabold text-black">Your bookings and past services</h2>
+          <h2 className="mt-1 text-[19px] font-extrabold text-black">Your current bookings</h2>
         </div>
         <button type="button" onClick={() => loadBookings(true)} disabled={refreshing} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#EFE4D0] bg-[#FFF9EE] text-[#8C6A18] disabled:opacity-50" aria-label="Refresh booking status">
           <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />

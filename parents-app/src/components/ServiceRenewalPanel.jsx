@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { showRenewalPanel } from '../utils/bookingVisibility';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../api/api';
 
 export default function ServiceRenewalPanel({ booking, onChange }) {
   const navigate = useNavigate();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [savedChoice, setSavedChoice] = useState(null);
-  if (!['active', 'expired'].includes(booking.status) || !(booking.paidAt || booking.couponAppliedAt || ['PAID', 'WAIVED'].includes(booking.paymentId?.status))) return null;
-  const ended = booking.status === 'expired' || (booking.serviceEndsAt && new Date(booking.serviceEndsAt) <= new Date());
+  if (!showRenewalPanel(booking, now) || !(booking.paidAt || booking.couponAppliedAt || ['PAID', 'WAIVED'].includes(booking.paymentId?.status))) return null;
+  const ended = booking.status === 'expired' || (booking.serviceEndsAt && new Date(booking.serviceEndsAt).getTime() <= now);
   const choice = savedChoice ?? booking.renewalDecision;
   const endDate = booking.serviceEndsAt ? new Date(booking.serviceEndsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'the service end date';
   const save = async (value) => {
