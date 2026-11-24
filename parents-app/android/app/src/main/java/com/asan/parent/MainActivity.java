@@ -61,12 +61,8 @@ public class MainActivity extends BridgeActivity {
     private void checkAndRequestPermissions() {
         List<String> permissions = new ArrayList<>();
         permissions.add(Manifest.permission.CAMERA);
-        permissions.add(Manifest.permission.READ_CONTACTS);
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
         permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-        permissions.add(Manifest.permission.RECORD_AUDIO);
-        permissions.add(Manifest.permission.READ_PHONE_STATE);
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS);
         }
