@@ -139,6 +139,8 @@ function Profile({
      STATE
   ======================================================= */
 
+  const [emailChallengeId,setEmailChallengeId]=useState("");
+  const [currentEmailOtp,setCurrentEmailOtp]=useState("");
   const [
     user,
     setUser,
@@ -768,7 +770,7 @@ function Profile({
           ""
         );
 
-        await API.post(
+        const sent = await API.post(
           "/parent/email/send-otp",
           {
             email:
@@ -783,6 +785,8 @@ function Profile({
         setOtp([
           ...EMPTY_OTP,
         ]);
+        setEmailChallengeId(sent.data.challengeId);
+        setCurrentEmailOtp("");
 
         setResendSeconds(
           60
@@ -1018,21 +1022,6 @@ function Profile({
           ""
         );
 
-        await API.post(
-          "/parent/email/verify-otp",
-          {
-            email:
-              pendingEmail,
-
-            otp:
-              otpValue,
-          }
-        );
-
-        /*
-          Save remaining changes.
-        */
-
         const currentName =
           user?.name
             ?.trim();
@@ -1079,40 +1068,11 @@ function Profile({
           }
         }
 
-        await updateParentProfile(
-          payload
-        );
-
-        /*
-          Final fresh copy from MongoDB.
-        */
-
-        const updatedParent =
-          await loadProfile();
-
-        if (updatedParent) {
-          applyParentProfile(
-            updatedParent
-          );
-        }
-
-        setShowEmailOtp(
-          false
-        );
-
-        setPendingEmail("");
-
-        setOtp([
-          ...EMPTY_OTP,
-        ]);
-
-        setResendSeconds(
-          0
-        );
-
-        setShowPersonalInfo(
-          false
-        );
+        await API.post("/parent/email/verify-otp",{email:pendingEmail,otp:otpValue,currentOtp:currentEmailOtp,challengeId:emailChallengeId,profileUpdates:payload});
+        clearLocalSession();
+        window.dispatchEvent(new CustomEvent("asan:parent-logged-out"));
+        alert("Email verified and changed. Please sign in using your new email.");
+        navigate("/",{replace:true});
       } catch (err) {
         console.error(
           "Verify email OTP error:",
@@ -1161,7 +1121,7 @@ function Profile({
           ""
         );
 
-        await API.post(
+        const sent = await API.post(
           "/parent/email/send-otp",
           {
             email:
@@ -1169,6 +1129,8 @@ function Profile({
           }
         );
 
+        setEmailChallengeId(sent.data.challengeId);
+        setCurrentEmailOtp("");
         setOtp([
           ...EMPTY_OTP,
         ]);
@@ -2789,6 +2751,8 @@ function Profile({
 
             <div className="p-5">
 
+              <label className="block mb-4 text-sm font-semibold">Code sent to your current email<input inputMode="numeric" autoComplete="off" maxLength={6} value={currentEmailOtp} onChange={e=>setCurrentEmailOtp(e.target.value.replace(/\D/g,""))} disabled={verifyingOtp} className="mt-2 w-full rounded-xl border border-[#E8D7A5] p-3 text-black"/></label>
+              <p className="mb-2 text-sm font-semibold">Code sent to your new email</p>
               <div className="grid grid-cols-6 gap-2">
 
                 {otp.map(
